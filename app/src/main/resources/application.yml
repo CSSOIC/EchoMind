@@ -105,10 +105,14 @@ app:
       - text/plain
   # oss 存储配置
   alioss:
-    access-key-id: LTAI5t9jZi4ReiaXpDNB4srr
-    endpoint: oss-cn-hangzhou.aliyuncs.com
-    access-key-secret: xlgJdb8APPwYFSz0AVrEwqD5xlv6Eg
-    bucket-name: web-fengyi-tlias
+    #access-key-id: LTAI5t9jZi4ReiaXpDNB4srr
+    #endpoint: oss-cn-hangzhou.aliyuncs.com
+    #access-key-secret: xlgJdb8APPwYFSz0AVrEwqD5xlv6Eg
+    #bucket-name: web-fengyi-tlias
+    access-key-id: ${ALIYUN_ACCESS_KEY_ID:your-access-key-id}
+    endpoint: ${ALIYUN_OSS_ENDPOINT:oss-cn-hangzhou.aliyuncs.com}
+    access-key-secret: ${ALIYUN_ACCESS_KEY_SECRET:your-access-key-secret}
+    bucket-name: ${ALIYUN_BUCKET_NAME:your-bucket-name}
 
   #storage:
    # endpoint: ${APP_STORAGE_ENDPOINT:http://localhost:9000}
