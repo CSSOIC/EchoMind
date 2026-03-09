@@ -3,6 +3,7 @@ package interview.guide.modules.interview;
 import interview.guide.common.annotation.RateLimit;
 import interview.guide.common.result.Result;
 import interview.guide.modules.interview.model.*;
+import interview.guide.modules.interview.pojo.VO.AddQuestionVO;
 import interview.guide.modules.interview.service.InterviewHistoryService;
 import interview.guide.modules.interview.service.InterviewPersistenceService;
 import interview.guide.modules.interview.service.InterviewSessionService;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.zip.Inflater;
 
 /**
  * 面试控制器
@@ -59,7 +61,7 @@ public class InterviewController {
     }
     
     /**
-     * 提交答案
+     * 提交任何答案
      */
     @PostMapping("/api/interview/sessions/{sessionId}/answers")
     @RateLimit(dimensions = {RateLimit.Dimension.GLOBAL}, count = 10)
@@ -68,12 +70,25 @@ public class InterviewController {
             @RequestBody Map<String, Object> body) {
         Integer questionIndex = (Integer) body.get("questionIndex");
         String answer = (String) body.get("answer");
+        Integer addQuestionIndex=(Integer)body.get("addQuestionIndex");
         log.info("提交答案: 会话{}, 问题{}", sessionId, questionIndex);
-        SubmitAnswerRequest request = new SubmitAnswerRequest(sessionId, questionIndex, answer);
+        SubmitAnswerRequest request = new SubmitAnswerRequest(sessionId, questionIndex ,answer,addQuestionIndex);
         SubmitAnswerResponse response = sessionService.submitAnswer(request);
         return Result.success(response);
     }
-    
+///**
+//    * 提交追问答案
+// */
+//    @PostMapping("/api/interview/sessions/{sessionId}/addAnswers")
+//    public Result<AddQuestionVO>submitAddAnswers(@PathVariable String sessionId,
+//                                                 @RequestBody Map<String,Object>body){
+//        Integer questionIndex =(Integer) body.get("questionIndex");
+//        String answer = (String) body.get("answer");
+//        Integer addQuestionIndex=(Integer)body.get("addQuestionIndex");
+//        log.info("提交：会话{}，第{}次追问答案，问题：{}",sessionId,addQuestionIndex,answer);
+//                AddQuestionVO addQuestionVO=sessionService.submitAddAnswers(questionIndex,answer,addQuestionIndex,sessionId);
+//                return Result.success(addQuestionVO);
+//    }
     /**
      * 生成面试报告
      */
@@ -102,8 +117,9 @@ public class InterviewController {
             @RequestBody Map<String, Object> body) {
         Integer questionIndex = (Integer) body.get("questionIndex");
         String answer = (String) body.get("answer");
+        Integer addQuestionIndex=(Integer)body.get("addQuestionIndex");
         log.info("暂存答案: 会话{}, 问题{}", sessionId, questionIndex);
-        SubmitAnswerRequest request = new SubmitAnswerRequest(sessionId, questionIndex, answer);
+        SubmitAnswerRequest request = new SubmitAnswerRequest(sessionId, questionIndex, answer,addQuestionIndex);
         sessionService.saveAnswer(request);
         return Result.success(null);
     }

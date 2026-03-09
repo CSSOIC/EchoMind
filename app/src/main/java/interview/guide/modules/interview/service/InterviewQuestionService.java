@@ -7,10 +7,9 @@ import interview.guide.common.exception.ErrorCode;
 import interview.guide.modules.interview.Util.QuestionUtil;
 import interview.guide.modules.interview.model.InterviewQuestionDTO;
 import interview.guide.modules.interview.model.InterviewQuestionDTO.QuestionType;
-import interview.guide.modules.interview.pojo.BackQuestionDistribution;
-import interview.guide.modules.interview.pojo.FrontQuestionDistribution;
-import interview.guide.modules.interview.pojo.QuestionDistribution;
-import interview.guide.modules.interview.pojo.TestQuestionDistribution;
+import interview.guide.modules.interview.pojo.*;
+import interview.guide.modules.interview.pojo.DTO.AddQuestionDTO;
+import interview.guide.modules.interview.pojo.VO.AddQuestionVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
@@ -39,8 +38,11 @@ public class InterviewQuestionService {
     
     private final ChatClient chatClient;
     private final PromptTemplate systemPromptTemplate;
+    private final PromptTemplate systemPromptTemplateAdd;
     private final PromptTemplate userPromptTemplate;
+    private final PromptTemplate userPromptTemplateAdd;
     private final BeanOutputConverter<QuestionListDTO> outputConverter;
+    private final BeanOutputConverter<AddQuestionDTO> outputConverterAdd;
     private final StructuredOutputInvoker structuredOutputInvoker;
     private final int followUpCount;
     
@@ -87,12 +89,20 @@ public class InterviewQuestionService {
             ChatClient.Builder chatClientBuilder,
             StructuredOutputInvoker structuredOutputInvoker,
             @Value("classpath:prompts/interview-question-system.st") Resource systemPromptResource,
+            @Value("classpath:prompts/interview-question-system.st") Resource systemPromptResourceAdd,
             @Value("classpath:prompts/interview-question-user.st") Resource userPromptResource,
+            @Value("classpath:prompts/interview-add-question-user.st") Resource userPromptResourceAdd,
+
             @Value("${app.interview.follow-up-count:1}") int followUpCount) throws IOException {
         this.chatClient = chatClientBuilder.build();
         this.structuredOutputInvoker = structuredOutputInvoker;
         this.systemPromptTemplate = new PromptTemplate(systemPromptResource.getContentAsString(StandardCharsets.UTF_8));
+        this.systemPromptTemplateAdd = new PromptTemplate(systemPromptResourceAdd.getContentAsString(StandardCharsets.UTF_8));
+
         this.userPromptTemplate = new PromptTemplate(userPromptResource.getContentAsString(StandardCharsets.UTF_8));
+        this.userPromptTemplateAdd = new PromptTemplate(userPromptResourceAdd.getContentAsString(StandardCharsets.UTF_8));
+
+        this.outputConverterAdd = new BeanOutputConverter<>(AddQuestionDTO.class);
         this.outputConverter = new BeanOutputConverter<>(QuestionListDTO.class);
         this.followUpCount = Math.max(0, Math.min(followUpCount, MAX_FOLLOW_UP_COUNT));
     }
@@ -377,5 +387,37 @@ public class InterviewQuestionService {
             return "基于“" + mainQuestion + "”，请结合你亲自做过的一个真实场景展开说明。";
         }
         return "基于“" + mainQuestion + "”，如果线上出现异常，你会如何定位并给出修复方案？";
+    }
+
+    /**
+    * 生成追问问题
+     */
+    public AddQuestionDTO generateAddQuestion(AddQuestionEntity addQuestion){
+        Map<String,Object>variables=new HashMap<>();
+        variables.put("question",addQuestion.getAddQuestion());
+        variables.put("questionAnswer",addQuestion.getAddQuestionAnswer());
+        String userPrompt= userPromptTemplateAdd.render(variables);
+        String systemPrompt = systemPromptTemplateAdd.render();
+        String systemPromptWithFormat = systemPrompt + "\n\n" + outputConverter.getFormat();
+        AddQuestionDTO addQuestionDTO;
+        try {
+            addQuestionDTO=structuredOutputInvoker.invoke(
+                    chatClient,
+                    systemPromptWithFormat,
+                    userPrompt,
+                    outputConverterAdd,
+                    ErrorCode.INTERVIEW_QUESTION_GENERATION_FAILED,
+                    "追问问题生成失败：",
+                    "结构化问题生成",
+                    log
+            );
+            log.info("Ai响应解析成功");
+        }catch (Exception e){
+            log.error("面试追问生成AI调用失败：{}",e.getMessage(),e);
+            throw  new BusinessException(ErrorCode.INTERVIEW_QUESTION_GENERATION_FAILED,
+                    "面试追问生成失败"+e.getMessage());
+        }
+        return addQuestionDTO;
+
     }
 }

@@ -7,12 +7,16 @@ import interview.guide.modules.interview.model.InterviewAnswerEntity;
 import interview.guide.modules.interview.model.InterviewQuestionDTO;
 import interview.guide.modules.interview.model.InterviewReportDTO;
 import interview.guide.modules.interview.model.InterviewSessionEntity;
+import interview.guide.modules.interview.pojo.AddQuestionEntity;
+import interview.guide.modules.interview.pojo.DTO.AddQuestionDTO;
+import interview.guide.modules.interview.repository.InterviewAddRepository;
 import interview.guide.modules.interview.repository.InterviewAnswerRepository;
 import interview.guide.modules.interview.repository.InterviewSessionRepository;
 import interview.guide.modules.resume.model.ResumeEntity;
 import interview.guide.modules.resume.repository.ResumeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
@@ -36,6 +40,8 @@ public class InterviewPersistenceService {
     private final InterviewAnswerRepository answerRepository;
     private final ResumeRepository resumeRepository;
     private final ObjectMapper objectMapper;
+    private final InterviewAddRepository interviewAddRepository;
+
     
     /**
      * 保存新的面试会话
@@ -323,5 +329,18 @@ public class InterviewPersistenceService {
             .distinct()
             .limit(30) // 核心改动：只保留最近的 30 道题
             .toList();
+    }
+
+    public void updateAddQuestionAnswer(AddQuestionEntity addQuestion) {
+        interviewAddRepository.save(addQuestion);
+    }
+
+    public void SaveAddQuestion(AddQuestionDTO nextAddQuestion) {
+        AddQuestionEntity ad=AddQuestionEntity.builder()
+                .addQuestion(nextAddQuestion.getAddQuestion())
+                .questionIndex(nextAddQuestion.questionIndex)
+                .addQuestionIndex(nextAddQuestion.getAddQuestionIndex())
+                .build();
+        interviewAddRepository.save(ad);
     }
 }

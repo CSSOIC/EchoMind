@@ -16,5 +16,6 @@ public record SubmitAnswerRequest(
     Integer questionIndex,
     
     @NotBlank(message = "答案不能为空")
-    String answer
+    String answer,
+    int addQuestionIndex
 ) {}

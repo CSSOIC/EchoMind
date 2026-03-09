@@ -1,8 +1,11 @@
 package interview.guide.modules.interview.model;
 
+import lombok.Builder;
+
 /**
  * 面试问题DTO
  */
+@Builder
 public record InterviewQuestionDTO(
     int questionIndex,
     String question,
@@ -12,6 +15,7 @@ public record InterviewQuestionDTO(
     Integer score,        // 单题得分 (0-100)
     String feedback,      // 单题反馈
     boolean isFollowUp,   // 是否为追问
+    int addQuestionIndex, //第几个追问
     Integer parentQuestionIndex // 追问关联的主问题索引
 ) {
     public enum QuestionType {
@@ -45,7 +49,7 @@ public record InterviewQuestionDTO(
      * 创建新问题（未回答状态）
      */
     public static InterviewQuestionDTO create(int index, String question, QuestionType type, String category) {
-        return new InterviewQuestionDTO(index, question, type, category, null, null, null, false, null);
+        return new InterviewQuestionDTO(index, question, type, category, null, null, null, false, 0,null);
     }
 
     /**
@@ -58,7 +62,7 @@ public record InterviewQuestionDTO(
             String category,
             boolean isFollowUp,
             Integer parentQuestionIndex) {
-        return new InterviewQuestionDTO(index, question, type, category, null, null, null, isFollowUp, parentQuestionIndex);
+        return new InterviewQuestionDTO(index, question, type, category, null, null, null, isFollowUp,0, parentQuestionIndex);
     }
     
     /**
@@ -66,7 +70,7 @@ public record InterviewQuestionDTO(
      */
     public InterviewQuestionDTO withAnswer(String answer) {
         return new InterviewQuestionDTO(
-            questionIndex, question, type, category, answer, score, feedback, isFollowUp, parentQuestionIndex);
+            questionIndex, question, type, category, answer, score, feedback, isFollowUp, 0,parentQuestionIndex);
     }
     
     /**
@@ -74,6 +78,6 @@ public record InterviewQuestionDTO(
      */
     public InterviewQuestionDTO withEvaluation(int score, String feedback) {
         return new InterviewQuestionDTO(
-            questionIndex, question, type, category, userAnswer, score, feedback, isFollowUp, parentQuestionIndex);
+            questionIndex, question, type, category, userAnswer, score, feedback, isFollowUp, 0,parentQuestionIndex);
     }
 }
