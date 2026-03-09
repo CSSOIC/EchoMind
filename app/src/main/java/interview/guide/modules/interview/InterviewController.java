@@ -1,5 +1,7 @@
 package interview.guide.modules.interview;
 
+import cn.hutool.http.HttpRequest;
+import cn.hutool.http.HttpResponse;
 import interview.guide.common.annotation.RateLimit;
 import interview.guide.common.result.Result;
 import interview.guide.modules.interview.model.*;
@@ -8,6 +10,9 @@ import interview.guide.modules.interview.service.InterviewPersistenceService;
 import interview.guide.modules.interview.service.InterviewSessionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -25,11 +30,11 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 public class InterviewController {
-    
+
     private final InterviewSessionService sessionService;
     private final InterviewHistoryService historyService;
     private final InterviewPersistenceService persistenceService;
-    
+
     /**
      * 创建面试会话
      */
@@ -40,7 +45,7 @@ public class InterviewController {
         InterviewSessionDTO session = sessionService.createSession(request);
         return Result.success(session);
     }
-    
+
     /**
      * 获取会话信息
      */
@@ -49,7 +54,7 @@ public class InterviewController {
         InterviewSessionDTO session = sessionService.getSession(sessionId);
         return Result.success(session);
     }
-    
+
     /**
      * 获取当前问题
      */
@@ -57,7 +62,7 @@ public class InterviewController {
     public Result<Map<String, Object>> getCurrentQuestion(@PathVariable String sessionId) {
         return Result.success(sessionService.getCurrentQuestionResponse(sessionId));
     }
-    
+
     /**
      * 提交答案
      */
@@ -73,7 +78,7 @@ public class InterviewController {
         SubmitAnswerResponse response = sessionService.submitAnswer(request);
         return Result.success(response);
     }
-    
+
     /**
      * 生成面试报告
      */
@@ -83,7 +88,7 @@ public class InterviewController {
         InterviewReportDTO report = sessionService.generateReport(sessionId);
         return Result.success(report);
     }
-    
+
     /**
      * 查找未完成的面试会话
      * GET /api/interview/sessions/unfinished/{resumeId}
@@ -92,7 +97,7 @@ public class InterviewController {
     public Result<InterviewSessionDTO> findUnfinishedSession(@PathVariable Long resumeId) {
         return Result.success(sessionService.findUnfinishedSessionOrThrow(resumeId));
     }
-    
+
     /**
      * 暂存答案（不进入下一题）
      */
@@ -107,7 +112,7 @@ public class InterviewController {
         sessionService.saveAnswer(request);
         return Result.success(null);
     }
-    
+
     /**
      * 提前交卷
      */
@@ -117,7 +122,7 @@ public class InterviewController {
         sessionService.completeInterview(sessionId);
         return Result.success(null);
     }
-    
+
     /**
      * 获取面试会话详情
      * GET /api/interview/sessions/{sessionId}/details
@@ -127,7 +132,7 @@ public class InterviewController {
         InterviewDetailDTO detail = historyService.getInterviewDetail(sessionId);
         return Result.success(detail);
     }
-    
+
     /**
      * 导出面试报告为PDF
      */
@@ -135,19 +140,19 @@ public class InterviewController {
     public ResponseEntity<byte[]> exportInterviewPdf(@PathVariable String sessionId) {
         try {
             byte[] pdfBytes = historyService.exportInterviewPdf(sessionId);
-            String filename = URLEncoder.encode("模拟面试报告_" + sessionId + ".pdf", 
-                StandardCharsets.UTF_8);
-            
+            String filename = URLEncoder.encode("模拟面试报告_" + sessionId + ".pdf",
+                    StandardCharsets.UTF_8);
+
             return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + filename)
-                .contentType(MediaType.APPLICATION_PDF)
-                .body(pdfBytes);
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + filename)
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdfBytes);
         } catch (Exception e) {
             log.error("导出PDF失败", e);
             return ResponseEntity.internalServerError().build();
         }
     }
-    
+
     /**
      * 删除面试会话
      */
@@ -156,5 +161,63 @@ public class InterviewController {
         log.info("删除面试会话: {}", sessionId);
         persistenceService.deleteSessionBySessionId(sessionId);
         return Result.success(null);
+    }
+
+
+
+    @Value("${app.tts.api-key:}")
+    private String apiKey;
+
+    @Value("${app.tts.endpoint}")
+    private String endpoint;
+
+    /*
+    * 获取TTS语音
+     */
+    @PostMapping("/api/interview/sessions/tts")
+    public ResponseEntity<Resource> getTtsMp3(@RequestBody TtsDTO req) {
+        try {
+            // 防乱码：清理特殊字符
+            String safeText = req.getText().replace("\"", "\\\"").replace("\n", "").replace("\r", "");
+
+            // 语速默认1.0
+            double speed = req.getRate() == null ? 1.0 : req.getRate();
+            // 音色默认值（可按前端传的voice覆盖）
+            String voice = req.getVoice() == null ? "zh-CN-XiaoxiaoNeural" : req.getVoice();
+
+            // 构造硅基TTS请求体
+            String reqBody = String.format("""
+                {
+                    "model": "FunAudioLLM/CosyVoice2-0.5B",
+                    "input": "%s",
+                    "voice": "%s",
+                    "response_format": "mp3",
+                    "speed": %s
+                }
+                """, safeText, voice, speed);
+
+            // 带超时 防请求卡死
+            HttpResponse httpResponse = HttpRequest.post(endpoint)
+                    .header("Authorization", "Bearer " + apiKey)
+                    .header("Content-Type", "application/json;charset=UTF-8")
+                    .body(reqBody)
+                    .setConnectionTimeout(10000)
+                    .setReadTimeout(30000)
+                    .execute();
+
+            byte[] mp3Bytes = httpResponse.bodyBytes();
+            ByteArrayResource resource = new ByteArrayResource(mp3Bytes);
+
+            // 返回标准MP3
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType("audio/mpeg"));
+            String fileName = URLEncoder.encode("voice.mp3", StandardCharsets.UTF_8);
+            headers.add("Content-Disposition", "inline;filename*=UTF-8''" + fileName);
+
+            return ResponseEntity.ok().headers(headers).body(resource);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }

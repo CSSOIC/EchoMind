@@ -2,6 +2,7 @@ package interview.guide.modules.knowledgebase.service;
 
 import interview.guide.common.exception.BusinessException;
 import interview.guide.common.exception.ErrorCode;
+import interview.guide.infrastructure.file.AliyunOssStorageService;
 import interview.guide.infrastructure.file.FileHashService;
 import interview.guide.infrastructure.file.FileStorageService;
 import interview.guide.infrastructure.file.FileValidationService;
@@ -14,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
 
@@ -30,6 +32,7 @@ public class KnowledgeBaseUploadService {
     private final KnowledgeBaseParseService parseService;
     private final KnowledgeBasePersistenceService persistenceService;
     private final FileStorageService storageService;
+    private final AliyunOssStorageService ossStorageService;
     private final KnowledgeBaseRepository knowledgeBaseRepository;
     private final FileValidationService fileValidationService;
     private final FileHashService fileHashService;
@@ -45,7 +48,7 @@ public class KnowledgeBaseUploadService {
      * @param category 分类（可选）
      * @return 上传结果和存储信息（包含duplicate字段，表示是否为重复上传）
      */
-    public Map<String, Object> uploadKnowledgeBase(MultipartFile file, String name, String category) {
+    public Map<String, Object> uploadKnowledgeBase(MultipartFile file, String name, String category) throws IOException {
         // 1. 验证文件
         fileValidationService.validateFile(file, MAX_FILE_SIZE, "知识库");
 
@@ -70,9 +73,11 @@ public class KnowledgeBaseUploadService {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "无法从文件中提取文本内容，请确保文件格式正确");
         }
 
-        // 5. 保存文件到RustFS
+       /* // 5. 保存文件到RustFS
         String fileKey = storageService.uploadKnowledgeBase(file);
-        String fileUrl = storageService.getFileUrl(fileKey);
+        String fileUrl = storageService.getFileUrl(fileKey);*/
+        String fileKey = ossStorageService.uploadKnowledgeBase(file);
+        String fileUrl = ossStorageService.getFileUrl(fileKey);
         log.info("知识库已存储到RustFS: {}", fileKey);
 
         // 6. 保存知识库元数据到数据库（状态为 PENDING）

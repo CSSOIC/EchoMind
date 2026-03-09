@@ -1,5 +1,6 @@
 package interview.guide.modules.knowledgebase.service;
 
+import interview.guide.infrastructure.file.AliyunOssStorageService;
 import interview.guide.infrastructure.file.ContentTypeDetectionService;
 import interview.guide.infrastructure.file.DocumentParseService;
 import interview.guide.infrastructure.file.FileStorageService;
@@ -20,7 +21,7 @@ public class KnowledgeBaseParseService {
     private final DocumentParseService documentParseService;
     private final ContentTypeDetectionService contentTypeDetectionService;
     private final FileStorageService storageService;
-
+    private final AliyunOssStorageService aliyunOssStorageService;
     /**
      * 解析上传的知识库文件，提取文本内容
      *
@@ -53,7 +54,7 @@ public class KnowledgeBaseParseService {
      */
     public String downloadAndParseContent(String storageKey, String originalFilename) {
         log.info("从存储下载并解析知识库文件: {}", originalFilename);
-        return documentParseService.downloadAndParseContent(storageService, storageKey, originalFilename);
+        return documentParseService.downloadAndParseContent(aliyunOssStorageService, storageKey, originalFilename);
     }
 
     /**

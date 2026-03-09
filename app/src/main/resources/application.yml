@@ -16,9 +16,9 @@ spring:
 
   # PostgreSQL数据库配置
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:interview_guide}
-    username: ${POSTGRES_USER:postgres}
-    password: ${POSTGRES_PASSWORD:123456}
+    url: jdbc:postgresql://localhost:5432/interview_guide
+    username: postgres
+    password: a912812618
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -42,7 +42,7 @@ spring:
     redisson:
       config: |
         singleServerConfig:
-          address: "redis://${REDIS_HOST:localhost}:${REDIS_PORT:6379}"
+          address: "redis://localhost:6379"
           database: 0
           connectionMinimumIdleSize: 10
           connectionPoolSize: 64
@@ -53,10 +53,10 @@ spring:
   ai:
     openai:
       base-url: https://dashscope.aliyuncs.com/compatible-mode
-      api-key: ${AI_BAILIAN_API_KEY}
+      api-key: sk-caae683978b54d32b85637a4e3602fce
       chat:
         options:
-          model: ${AI_MODEL:qwen-plus}
+          model: qwen-plus
           temperature: 0.2
       # Embedding模型配置 - 使用text-embedding-v3
       embedding:
@@ -79,23 +79,23 @@ spring:
 app:
   ai:
     # 结构化输出重试次数（用于 BeanOutputConverter 解析失败时的业务层重试）
-    structured-max-attempts: ${APP_AI_STRUCTURED_MAX_ATTEMPTS:2}
+    structured-max-attempts: 2
     # 重试时是否将上次错误原因注入提示词，帮助模型定向修复输出
-    structured-include-last-error: ${APP_AI_STRUCTURED_INCLUDE_LAST_ERROR:true}
+    structured-include-last-error: true
     rag:
       rewrite:
-        enabled: ${APP_AI_RAG_REWRITE_ENABLED:true}
+        enabled: true
       search:
-        short-query-length: ${APP_AI_RAG_SHORT_QUERY_LENGTH:4}
-        topk-short: ${APP_AI_RAG_TOPK_SHORT:20}
-        topk-medium: ${APP_AI_RAG_TOPK_MEDIUM:12}
-        topk-long: ${APP_AI_RAG_TOPK_LONG:8}
-        min-score-short: ${APP_AI_RAG_MIN_SCORE_SHORT:0.18}
-        min-score-default: ${APP_AI_RAG_MIN_SCORE_DEFAULT:0.28}
+        short-query-length: 4
+        topk-short: 20
+        topk-medium: 12
+        topk-long: 8
+        min-score-short: 0.18
+        min-score-default: 0.28
   interview:
-    follow-up-count: ${APP_INTERVIEW_FOLLOW_UP_COUNT:1}
+    follow-up-count: 1
     evaluation:
-      batch-size: ${APP_INTERVIEW_EVALUATION_BATCH_SIZE:8}
+      batch-size: 8
   resume:
     upload-dir: ${java.io.tmpdir}/ai-interview/resumes
     allowed-types:
@@ -103,15 +103,23 @@ app:
       - application/msword
       - application/vnd.openxmlformats-officedocument.wordprocessingml.document
       - text/plain
+  # oss 存储配置
+  alioss:
+    access-key-id: LTAI5t9jZi4ReiaXpDNB4srr
+    endpoint: oss-cn-hangzhou.aliyuncs.com
+    access-key-secret: xlgJdb8APPwYFSz0AVrEwqD5xlv6Eg
+    bucket-name: web-fengyi-tlias
 
-  # RustFS (S3兼容) 存储配置
-  storage:
-    endpoint: ${APP_STORAGE_ENDPOINT:http://localhost:9000}
-    access-key: ${APP_STORAGE_ACCESS_KEY:wr45VXJZhCxc6FAWz0YR}
-    secret-key: ${APP_STORAGE_SECRET_KEY:GtKxV57WJkpw4CvASPBzTy2DYElLnRqh8dIXQa0m}
-    bucket: ${APP_STORAGE_BUCKET:interview-guide}
-    region: ${APP_STORAGE_REGION:us-east-1}
-  
+  #storage:
+   # endpoint: ${APP_STORAGE_ENDPOINT:http://localhost:9000}
+    #access-key: ${APP_STORAGE_ACCESS_KEY:wr45VXJZhCxc6FAWz0YR}
+    #secret-key: ${APP_STORAGE_SECRET_KEY:GtKxV57WJkpw4CvASPBzTy2DYElLnRqh8dIXQa0m}
+    #bucket: ${APP_STORAGE_BUCKET:interview-guide}
+    #region: ${APP_STORAGE_REGION:us-east-1}
+  tts :
+    api-key: sk-auhhxjwaakbcyzglewzhkxrwpvftgcfkhwknmlhgixmjknpr
+    endpoint: https://cloud.siliconflow.cn/me/playground/text-to-speech
+    enabled: true
   # CORS配置 - React前端
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5174,http://localhost:80}
+    allowed-origins: http://localhost:5173,http://localhost:5174,http://localhost:80

@@ -146,7 +146,7 @@ public class DocumentParseService {
      * @param originalFilename 原始文件名
      * @return 提取的文本内容
      */
-    public String downloadAndParseContent(FileStorageService storageService, String storageKey, String originalFilename) {
+    public String downloadAndParseContent(AliyunOssStorageService storageService, String storageKey, String originalFilename) {
         try {
             byte[] fileBytes = storageService.downloadFile(storageKey);
             if (fileBytes == null || fileBytes.length == 0) {

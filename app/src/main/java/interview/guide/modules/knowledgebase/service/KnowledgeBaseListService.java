@@ -2,6 +2,7 @@ package interview.guide.modules.knowledgebase.service;
 
 import interview.guide.common.exception.BusinessException;
 import interview.guide.common.exception.ErrorCode;
+import interview.guide.infrastructure.file.AliyunOssStorageService;
 import interview.guide.infrastructure.file.FileStorageService;
 import interview.guide.infrastructure.mapper.KnowledgeBaseMapper;
 import interview.guide.modules.knowledgebase.model.KnowledgeBaseEntity;
@@ -16,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,7 +34,7 @@ public class KnowledgeBaseListService {
     private final RagChatMessageRepository ragChatMessageRepository;
     private final KnowledgeBaseMapper knowledgeBaseMapper;
     private final FileStorageService fileStorageService;
-
+    private final AliyunOssStorageService aliyunOssStorageService;
     /**
      * 获取知识库列表（支持状态过滤和排序）
      * 
@@ -205,7 +207,12 @@ public class KnowledgeBaseListService {
         }
 
         log.info("下载知识库文件: id={}, filename={}", id, entity.getOriginalFilename());
-        return fileStorageService.downloadFile(storageKey);
+        /*return fileStorageService.downloadFile(storageKey);*/
+        try {
+            return aliyunOssStorageService.downloadFile(storageKey);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
