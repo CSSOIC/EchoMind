@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 /**
  * RustFS (S3兼容) 存储配置属性
  */
-@Data
+/*@Data
 @Component
 @ConfigurationProperties(prefix = "app.storage")
 public class StorageConfigProperties {
@@ -17,4 +17,4 @@ public class StorageConfigProperties {
     private String secretKey;
     private String bucket;
     private String region = "us-east-1";
-}
+}*/

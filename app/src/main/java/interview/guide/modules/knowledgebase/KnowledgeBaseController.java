@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 
+import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -143,7 +144,7 @@ public class KnowledgeBaseController {
     public Result<Map<String, Object>> uploadKnowledgeBase(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "name", required = false) String name,
-            @RequestParam(value = "category", required = false) String category) {
+            @RequestParam(value = "category", required = false) String category) throws IOException {
         return Result.success(uploadService.uploadKnowledgeBase(file, name, category));
     }
 

@@ -48,6 +48,7 @@ public class InterviewSessionCache {
     @Data
     public static class CachedSession implements Serializable {
         private String sessionId;
+        private int jobId;
         private String resumeText;
         private Long resumeId;
         private String questionsJson;  // 序列化的问题列表
@@ -58,13 +59,14 @@ public class InterviewSessionCache {
         }
 
         public CachedSession(String sessionId, String resumeText, Long resumeId,
-                            List<InterviewQuestionDTO> questions, int currentIndex,
-                            SessionStatus status, ObjectMapper objectMapper) {
+                             List<InterviewQuestionDTO> questions, int currentIndex,
+                             SessionStatus status, int jobId,ObjectMapper objectMapper) {
             this.sessionId = sessionId;
             this.resumeText = resumeText;
             this.resumeId = resumeId;
             this.currentIndex = currentIndex;
             this.status = status;
+            this.jobId=jobId;
             try {
                 this.questionsJson = objectMapper.writeValueAsString(questions);
             } catch (JacksonException e) {
@@ -85,11 +87,11 @@ public class InterviewSessionCache {
      * 保存会话到缓存
      */
     public void saveSession(String sessionId, String resumeText, Long resumeId,
-                           List<InterviewQuestionDTO> questions, int currentIndex,
-                           SessionStatus status) {
+                            List<InterviewQuestionDTO> questions, int currentIndex,
+                            SessionStatus status,int jobId) {
         String key = buildSessionKey(sessionId);
         CachedSession cachedSession = new CachedSession(
-            sessionId, resumeText, resumeId, questions, currentIndex, status, objectMapper
+                sessionId, resumeText, resumeId, questions, currentIndex, status,jobId, objectMapper
         );
 
         redisService.set(key, cachedSession, SESSION_TTL);

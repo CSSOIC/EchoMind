@@ -1,8 +1,9 @@
 package interview.guide.modules.resume.service;
 
+import interview.guide.infrastructure.file.AliyunOssStorageService;
 import interview.guide.infrastructure.file.ContentTypeDetectionService;
 import interview.guide.infrastructure.file.DocumentParseService;
-import interview.guide.infrastructure.file.FileStorageService;
+/*import interview.guide.infrastructure.file.FileStorageService;*/
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,8 +20,8 @@ public class ResumeParseService {
 
     private final DocumentParseService documentParseService;
     private final ContentTypeDetectionService contentTypeDetectionService;
-    private final FileStorageService storageService;
-
+  /*  private final AliyunOssStorageService storageService;*/
+    private final AliyunOssStorageService ossStorageService;
     /**
      * 解析上传的简历文件，提取文本内容
      *
@@ -53,7 +54,7 @@ public class ResumeParseService {
      */
     public String downloadAndParseContent(String storageKey, String originalFilename) {
         log.info("从存储下载并解析简历文件: {}", originalFilename);
-        return documentParseService.downloadAndParseContent(storageService, storageKey, originalFilename);
+        return documentParseService.downloadAndParseContent(ossStorageService, storageKey, originalFilename);
     }
 
     /**

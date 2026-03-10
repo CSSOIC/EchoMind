@@ -4,7 +4,7 @@ import interview.guide.common.exception.BusinessException;
 import interview.guide.common.exception.ErrorCode;
 import interview.guide.infrastructure.file.AliyunOssStorageService;
 import interview.guide.infrastructure.file.FileHashService;
-import interview.guide.infrastructure.file.FileStorageService;
+/*import interview.guide.infrastructure.file.FileStorageService;*/
 import interview.guide.infrastructure.file.FileValidationService;
 import interview.guide.modules.knowledgebase.listener.VectorizeStreamProducer;
 import interview.guide.modules.knowledgebase.model.KnowledgeBaseEntity;
@@ -31,7 +31,7 @@ public class KnowledgeBaseUploadService {
 
     private final KnowledgeBaseParseService parseService;
     private final KnowledgeBasePersistenceService persistenceService;
-    private final FileStorageService storageService;
+    /*private final FileStorageService storageService;*/
     private final AliyunOssStorageService ossStorageService;
     private final KnowledgeBaseRepository knowledgeBaseRepository;
     private final FileValidationService fileValidationService;

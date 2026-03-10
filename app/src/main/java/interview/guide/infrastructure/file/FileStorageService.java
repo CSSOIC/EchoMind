@@ -1,6 +1,7 @@
+/*
 package interview.guide.infrastructure.file;
 
-import interview.guide.common.config.StorageConfigProperties;
+
 import interview.guide.common.exception.BusinessException;
 import interview.guide.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -21,9 +22,11 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
+*/
 /**
  * 文件存储服务
- */
+ *//*
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -32,40 +35,50 @@ public class FileStorageService {
     private final S3Client s3Client;
     private final StorageConfigProperties storageConfig;
 
-    /**
+    */
+/**
      * 上传简历文件
-     */
+     *//*
+
     public String uploadResume(MultipartFile file) {
         return uploadFile(file, "resumes");
     }
 
-    /**
+    */
+/**
      * 删除简历文件
-     */
+     *//*
+
     public void deleteResume(String fileKey) {
         deleteFile(fileKey);
     }
 
-    /**
+    */
+/**
      * 上传知识库文件
-     */
+     *//*
+
     public String uploadKnowledgeBase(MultipartFile file) {
         return uploadFile(file, "knowledgebases");
     }
 
-    /**
+    */
+/**
      * 删除知识库文件
-     */
+     *//*
+
     public void deleteKnowledgeBase(String fileKey) {
         deleteFile(fileKey);
     }
 
-    /**
+    */
+/**
      * 下载文件（通用方法）
      *
      * @param fileKey 文件存储键
      * @return 文件字节数组
-     */
+     *//*
+
     public byte[] downloadFile(String fileKey) {
         if (!fileExists(fileKey)) {
             throw new BusinessException(ErrorCode.STORAGE_DOWNLOAD_FAILED, "文件不存在: " + fileKey);
@@ -83,9 +96,11 @@ public class FileStorageService {
         }
     }
 
-    /**
+    */
+/**
      * 通用文件上传方法
-     */
+     *//*
+
     private String uploadFile(MultipartFile file, String prefix) {
         String originalFilename = file.getOriginalFilename();
         String fileKey = generateFileKey(originalFilename, prefix);
@@ -110,9 +125,11 @@ public class FileStorageService {
         }
     }
 
-    /**
+    */
+/**
      * 检查文件是否存在
-     */
+     *//*
+
     public boolean fileExists(String fileKey) {
         try {
             HeadObjectRequest headRequest = HeadObjectRequest.builder()
@@ -129,9 +146,11 @@ public class FileStorageService {
         }
     }
 
-    /**
+    */
+/**
      * 获取文件大小（字节）
-     */
+     *//*
+
     public long getFileSize(String fileKey) {
         try {
             HeadObjectRequest headRequest = HeadObjectRequest.builder()
@@ -145,9 +164,11 @@ public class FileStorageService {
         }
     }
 
-    /**
+    */
+/**
      * 通用文件删除方法
-     */
+     *//*
+
     private void deleteFile(String fileKey) {
         // 空键直接跳过
         if (fileKey == null || fileKey.isEmpty()) {
@@ -178,9 +199,11 @@ public class FileStorageService {
         return String.format("%s/%s/%s", storageConfig.getEndpoint(), storageConfig.getBucket(), fileKey);
     }
 
-    /**
+    */
+/**
      * 确保存储桶存在
-     */
+     *//*
+
     public void ensureBucketExists() {
         try {
             HeadBucketRequest headRequest = HeadBucketRequest.builder()
@@ -200,9 +223,11 @@ public class FileStorageService {
         }
     }
 
-    /**
+    */
+/**
      * 生成文件键
-     */
+     *//*
+
     private String generateFileKey(String originalFilename, String prefix) {
         LocalDateTime now = LocalDateTime.now();
         String datePath = now.format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
@@ -211,7 +236,8 @@ public class FileStorageService {
         return String.format("%s/%s/%s_%s", prefix, datePath, uuid, safeName);
     }
 
-    /**
+    */
+/**
      * 清理文件名，移除不安全的字符
      * <p>
      * 汉字转换为大驼峰拼音，保留字母、数字、点号、下划线和连字符，
@@ -219,7 +245,8 @@ public class FileStorageService {
      *
      * @param filename 原始文件名
      * @return 清理后的安全文件名
-     */
+     *//*
+
     private String sanitizeFilename(String filename) {
         if (filename == null || filename.isEmpty()) {
             return "unknown";
@@ -227,12 +254,14 @@ public class FileStorageService {
         return convertToPinyin(filename);
     }
 
-    /**
+    */
+/**
      * 将字符串中的汉字转换为大驼峰拼音，非汉字字符保持不变
      *
      * @param input 输入字符串
      * @return 转换后的字符串
-     */
+     *//*
+
     private String convertToPinyin(String input) {
         HanyuPinyinOutputFormat format = new HanyuPinyinOutputFormat();
         format.setCaseType(HanyuPinyinCaseType.LOWERCASE);
@@ -256,9 +285,11 @@ public class FileStorageService {
         return result.toString();
     }
 
-    /**
+    */
+/**
      * 处理单个字符，保留安全字符，其他替换为下划线
-     */
+     *//*
+
     private char sanitizeChar(char ch) {
         if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
                 || (ch >= '0' && ch <= '9') || ch == '.' || ch == '_' || ch == '-') {
@@ -267,9 +298,11 @@ public class FileStorageService {
         return '_';
     }
 
-    /**
+    */
+/**
      * 首字母大写
-     */
+     *//*
+
     private String capitalize(String str) {
         if (str == null || str.isEmpty()) {
             return str;
@@ -277,3 +310,4 @@ public class FileStorageService {
         return str.substring(0, 1).toUpperCase() + str.substring(1);
     }
 }
+*/

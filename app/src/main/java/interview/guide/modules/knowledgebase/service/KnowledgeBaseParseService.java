@@ -3,7 +3,7 @@ package interview.guide.modules.knowledgebase.service;
 import interview.guide.infrastructure.file.AliyunOssStorageService;
 import interview.guide.infrastructure.file.ContentTypeDetectionService;
 import interview.guide.infrastructure.file.DocumentParseService;
-import interview.guide.infrastructure.file.FileStorageService;
+/*import interview.guide.infrastructure.file.FileStorageService;*/
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,7 +20,7 @@ public class KnowledgeBaseParseService {
 
     private final DocumentParseService documentParseService;
     private final ContentTypeDetectionService contentTypeDetectionService;
-    private final FileStorageService storageService;
+    /*private final FileStorageService storageService;*/
     private final AliyunOssStorageService aliyunOssStorageService;
     /**
      * 解析上传的知识库文件，提取文本内容

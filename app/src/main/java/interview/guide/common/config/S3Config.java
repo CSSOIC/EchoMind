@@ -1,3 +1,4 @@
+/*
 package interview.guide.common.config;
 
 import lombok.RequiredArgsConstructor;
@@ -10,9 +11,11 @@ import software.amazon.awssdk.services.s3.S3Client;
 
 import java.net.URI;
 
+*/
 /**
  * S3客户端配置（用于RustFS）
- */
+ *//*
+
 @Configuration
 @RequiredArgsConstructor
 public class S3Config {
@@ -34,3 +37,4 @@ public class S3Config {
             .build();
     }
 }
+*/

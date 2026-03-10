@@ -2,7 +2,8 @@ package interview.guide.modules.resume.service;
 
 import interview.guide.common.exception.BusinessException;
 import interview.guide.common.exception.ErrorCode;
-import interview.guide.infrastructure.file.FileStorageService;
+/*import interview.guide.infrastructure.file.FileStorageService;*/
+import interview.guide.infrastructure.file.AliyunOssStorageService;
 import interview.guide.modules.interview.service.InterviewPersistenceService;
 import interview.guide.modules.resume.model.ResumeEntity;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +21,8 @@ public class ResumeDeleteService {
     
     private final ResumePersistenceService persistenceService;
     private final InterviewPersistenceService interviewPersistenceService;
-    private final FileStorageService storageService;
+    /*private final FileStorageService storageService;*/
+    private final AliyunOssStorageService storageService;
     
     /**
      * 删除简历

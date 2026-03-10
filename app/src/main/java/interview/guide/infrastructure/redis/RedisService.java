@@ -175,7 +175,7 @@ public class RedisService {
      * 执行带锁的操作
      */
     public <T> T executeWithLock(String lockKey, long waitTime, long leaseTime,
-                                  TimeUnit unit, LockedOperation<T> operation) {
+                                 TimeUnit unit, LockedOperation<T> operation) {
         RLock lock = redissonClient.getLock(lockKey);
         try {
             if (lock.tryLock(waitTime, leaseTime, unit)) {
@@ -231,11 +231,11 @@ public class RedisService {
 
         // 使用阻塞读取，让 Redis 服务端等待消息
         Map<StreamMessageId, Map<String, String>> messages = stream.readGroup(
-            groupName,
-            consumerName,
-            StreamReadGroupArgs.neverDelivered()
-                .count(count)
-                .timeout(Duration.ofMillis(blockTimeoutMs))
+                groupName,
+                consumerName,
+                StreamReadGroupArgs.neverDelivered()
+                        .count(count)
+                        .timeout(Duration.ofMillis(blockTimeoutMs))
         );
 
         if (messages == null || messages.isEmpty()) {
@@ -298,7 +298,7 @@ public class RedisService {
             String streamKey, String groupName, String consumerName, int count) {
         RStream<String, String> stream = redissonClient.getStream(streamKey, StringCodec.INSTANCE);
         return stream.readGroup(groupName, consumerName,
-            StreamReadGroupArgs.neverDelivered().count(count));
+                StreamReadGroupArgs.neverDelivered().count(count));
     }
 
     /**

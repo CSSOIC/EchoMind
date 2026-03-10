@@ -7,12 +7,16 @@ import interview.guide.modules.interview.model.InterviewAnswerEntity;
 import interview.guide.modules.interview.model.InterviewQuestionDTO;
 import interview.guide.modules.interview.model.InterviewReportDTO;
 import interview.guide.modules.interview.model.InterviewSessionEntity;
+import interview.guide.modules.interview.pojo.AddQuestionEntity;
+import interview.guide.modules.interview.pojo.DTO.AddQuestionDTO;
+import interview.guide.modules.interview.repository.InterviewAddRepository;
 import interview.guide.modules.interview.repository.InterviewAnswerRepository;
 import interview.guide.modules.interview.repository.InterviewSessionRepository;
 import interview.guide.modules.resume.model.ResumeEntity;
 import interview.guide.modules.resume.repository.ResumeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
@@ -31,43 +35,46 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class InterviewPersistenceService {
-    
+
     private final InterviewSessionRepository sessionRepository;
     private final InterviewAnswerRepository answerRepository;
     private final ResumeRepository resumeRepository;
     private final ObjectMapper objectMapper;
-    
+    private final InterviewAddRepository interviewAddRepository;
+
+
     /**
      * 保存新的面试会话
      */
     @Transactional(rollbackFor = Exception.class)
-    public InterviewSessionEntity saveSession(String sessionId, Long resumeId, 
-                                              int totalQuestions, 
-                                              List<InterviewQuestionDTO> questions) {
+    public InterviewSessionEntity saveSession(String sessionId, Long resumeId,
+                                              int totalQuestions,
+                                              List<InterviewQuestionDTO> questions,int jobId) {
         try {
             Optional<ResumeEntity> resumeOpt = resumeRepository.findById(resumeId);
             if (resumeOpt.isEmpty()) {
                 throw new BusinessException(ErrorCode.RESUME_NOT_FOUND);
             }
-            
+
             InterviewSessionEntity session = new InterviewSessionEntity();
             session.setSessionId(sessionId);
             session.setResume(resumeOpt.get());
+            session.setJobId(jobId);
             session.setTotalQuestions(totalQuestions);
             session.setCurrentQuestionIndex(0);
             session.setStatus(InterviewSessionEntity.SessionStatus.CREATED);
             session.setQuestionsJson(objectMapper.writeValueAsString(questions));
-            
+
             InterviewSessionEntity saved = sessionRepository.save(session);
             log.info("面试会话已保存: sessionId={}, resumeId={}", sessionId, resumeId);
-            
+
             return saved;
         } catch (JacksonException e) {
             log.error("序列化问题列表失败: {}", e.getMessage(), e);
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "保存会话失败");
         }
     }
-    
+
     /**
      * 更新会话状态
      */
@@ -78,7 +85,7 @@ public class InterviewPersistenceService {
             InterviewSessionEntity session = sessionOpt.get();
             session.setStatus(status);
             if (status == InterviewSessionEntity.SessionStatus.COMPLETED ||
-                status == InterviewSessionEntity.SessionStatus.EVALUATED) {
+                    status == InterviewSessionEntity.SessionStatus.EVALUATED) {
                 session.setCompletedAt(LocalDateTime.now());
             }
             sessionRepository.save(session);
@@ -103,7 +110,7 @@ public class InterviewPersistenceService {
             log.debug("评估状态已更新: sessionId={}, status={}", sessionId, status);
         }
     }
-    
+
     /**
      * 更新当前问题索引
      */
@@ -117,7 +124,7 @@ public class InterviewPersistenceService {
             sessionRepository.save(session);
         }
     }
-    
+
     /**
      * 保存面试答案
      */
@@ -131,13 +138,13 @@ public class InterviewPersistenceService {
         }
 
         InterviewAnswerEntity answer = answerRepository
-            .findBySession_SessionIdAndQuestionIndex(sessionId, questionIndex)
-            .orElseGet(() -> {
-                InterviewAnswerEntity created = new InterviewAnswerEntity();
-                created.setSession(sessionOpt.get());
-                created.setQuestionIndex(questionIndex);
-                return created;
-            });
+                .findBySession_SessionIdAndQuestionIndex(sessionId, questionIndex)
+                .orElseGet(() -> {
+                    InterviewAnswerEntity created = new InterviewAnswerEntity();
+                    created.setSession(sessionOpt.get());
+                    created.setQuestionIndex(questionIndex);
+                    return created;
+                });
 
         answer.setQuestion(question);
         answer.setCategory(category);
@@ -146,12 +153,12 @@ public class InterviewPersistenceService {
         answer.setFeedback(feedback);
 
         InterviewAnswerEntity saved = answerRepository.save(answer);
-        log.info("面试答案已保存: sessionId={}, questionIndex={}, score={}", 
+        log.info("面试答案已保存: sessionId={}, questionIndex={}, score={}",
                 sessionId, questionIndex, score);
-        
+
         return saved;
     }
-    
+
     /**
      * 保存面试报告
      */
@@ -178,19 +185,19 @@ public class InterviewPersistenceService {
             // 查询已存在的答案，建立索引
             List<InterviewAnswerEntity> existingAnswers = answerRepository.findBySession_SessionIdOrderByQuestionIndex(sessionId);
             java.util.Map<Integer, InterviewAnswerEntity> answerMap = existingAnswers.stream()
-                .collect(java.util.stream.Collectors.toMap(
-                    InterviewAnswerEntity::getQuestionIndex,
-                    a -> a,
-                    (a1, a2) -> a1
-                ));
+                    .collect(java.util.stream.Collectors.toMap(
+                            InterviewAnswerEntity::getQuestionIndex,
+                            a -> a,
+                            (a1, a2) -> a1
+                    ));
 
             // 建立参考答案索引
             java.util.Map<Integer, InterviewReportDTO.ReferenceAnswer> refAnswerMap = report.referenceAnswers().stream()
-                .collect(java.util.stream.Collectors.toMap(
-                    InterviewReportDTO.ReferenceAnswer::questionIndex,
-                    r -> r,
-                    (r1, r2) -> r1
-                ));
+                    .collect(java.util.stream.Collectors.toMap(
+                            InterviewReportDTO.ReferenceAnswer::questionIndex,
+                            r -> r,
+                            (r1, r2) -> r1
+                    ));
 
             List<InterviewAnswerEntity> answersToSave = new java.util.ArrayList<>();
 
@@ -227,27 +234,27 @@ public class InterviewPersistenceService {
 
             answerRepository.saveAll(answersToSave);
             log.info("面试报告已保存: sessionId={}, score={}, 答案数={}",
-                sessionId, report.overallScore(), answersToSave.size());
+                    sessionId, report.overallScore(), answersToSave.size());
 
         } catch (JacksonException e) {
             log.error("序列化报告失败: {}", e.getMessage(), e);
         }
     }
-    
+
     /**
      * 根据会话ID获取会话
      */
     public Optional<InterviewSessionEntity> findBySessionId(String sessionId) {
         return sessionRepository.findBySessionId(sessionId);
     }
-    
+
     /**
      * 获取简历的所有面试记录
      */
     public List<InterviewSessionEntity> findByResumeId(Long resumeId) {
         return sessionRepository.findByResumeIdOrderByCreatedAtDesc(resumeId);
     }
-    
+
     /**
      * 删除简历的所有面试会话
      * 由于InterviewSessionEntity设置了cascade = CascadeType.ALL, orphanRemoval = true
@@ -261,7 +268,7 @@ public class InterviewPersistenceService {
             log.info("已删除 {} 个面试会话（包含所有答案）", sessions.size());
         }
     }
-    
+
     /**
      * 删除单个面试会话
      * 由于InterviewSessionEntity设置了cascade = CascadeType.ALL, orphanRemoval = true
@@ -277,18 +284,18 @@ public class InterviewPersistenceService {
             throw new BusinessException(ErrorCode.INTERVIEW_SESSION_NOT_FOUND);
         }
     }
-    
+
     /**
      * 查找未完成的面试会话（CREATED或IN_PROGRESS状态）
      */
     public Optional<InterviewSessionEntity> findUnfinishedSession(Long resumeId) {
         List<InterviewSessionEntity.SessionStatus> unfinishedStatuses = List.of(
-            InterviewSessionEntity.SessionStatus.CREATED,
-            InterviewSessionEntity.SessionStatus.IN_PROGRESS
+                InterviewSessionEntity.SessionStatus.CREATED,
+                InterviewSessionEntity.SessionStatus.IN_PROGRESS
         );
         return sessionRepository.findFirstByResumeIdAndStatusInOrderByCreatedAtDesc(resumeId, unfinishedStatuses);
     }
-    
+
     /**
      * 根据会话ID查找所有答案
      */
@@ -302,25 +309,38 @@ public class InterviewPersistenceService {
     public List<String> getHistoricalQuestionsByResumeId(Long resumeId) {
         // 只查询最近的 10 个会话，避免加载过多历史数据
         List<InterviewSessionEntity> sessions = sessionRepository.findTop10ByResumeIdOrderByCreatedAtDesc(resumeId);
-        
+
         return sessions.stream()
-            .map(InterviewSessionEntity::getQuestionsJson)
-            .filter(json -> json != null && !json.isEmpty())
-            .flatMap(json -> {
-                try {
-                    List<InterviewQuestionDTO> questions = objectMapper.readValue(json, 
-                        new TypeReference<List<InterviewQuestionDTO>>() {});
-                    // 过滤掉追问，只保留主问题作为历史参考
-                    return questions.stream()
-                        .filter(q -> !q.isFollowUp())
-                        .map(InterviewQuestionDTO::question);
-                } catch (Exception e) {
-                    log.error("解析历史问题JSON失败", e);
-                    return java.util.stream.Stream.empty();
-                }
-            })
-            .distinct()
-            .limit(30) // 核心改动：只保留最近的 30 道题
-            .toList();
+                .map(InterviewSessionEntity::getQuestionsJson)
+                .filter(json -> json != null && !json.isEmpty())
+                .flatMap(json -> {
+                    try {
+                        List<InterviewQuestionDTO> questions = objectMapper.readValue(json,
+                                new TypeReference<List<InterviewQuestionDTO>>() {});
+                        // 过滤掉追问，只保留主问题作为历史参考
+                        return questions.stream()
+                                .filter(q -> !q.isFollowUp())
+                                .map(InterviewQuestionDTO::question);
+                    } catch (Exception e) {
+                        log.error("解析历史问题JSON失败", e);
+                        return java.util.stream.Stream.empty();
+                    }
+                })
+                .distinct()
+                .limit(30) // 核心改动：只保留最近的 30 道题
+                .toList();
+    }
+
+    public void updateAddQuestionAnswer(AddQuestionEntity addQuestion) {
+        interviewAddRepository.save(addQuestion);
+    }
+
+    public void SaveAddQuestion(AddQuestionDTO nextAddQuestion) {
+        AddQuestionEntity ad=AddQuestionEntity.builder()
+                .addQuestion(nextAddQuestion.getAddQuestion())
+                .questionIndex(nextAddQuestion.questionIndex)
+                .addQuestionIndex(nextAddQuestion.getAddQuestionIndex())
+                .build();
+        interviewAddRepository.save(ad);
     }
 }

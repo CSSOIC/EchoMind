@@ -51,25 +51,25 @@ public class InterviewHistoryService {
 
         // 解析所有题目（用于构建完整的答案列表）
         List<InterviewQuestionDTO> allQuestions = parseJson(
-            session.getQuestionsJson(),
+                session.getQuestionsJson(),
                 new TypeReference<>() {
                 }
         );
 
         // 构建答案详情列表（包含所有题目，未回答的也要显示）
         List<InterviewDetailDTO.AnswerDetailDTO> answerList = buildAnswerDetailList(
-            allQuestions,
-            session.getAnswers()
+                allQuestions,
+                session.getAnswers()
         );
 
         // 使用 MapStruct 组装最终 DTO
         return interviewMapper.toDetailDTO(
-            session,
-            questions,
-            strengths,
-            improvements,
-            referenceAnswers,
-            answerList
+                session,
+                questions,
+                strengths,
+                improvements,
+                referenceAnswers,
+                answerList
         );
     }
 
@@ -78,8 +78,8 @@ public class InterviewHistoryService {
      * 对于用户已回答的题目使用答案数据，对于未回答的题目构建空答案
      */
     private List<InterviewDetailDTO.AnswerDetailDTO> buildAnswerDetailList(
-        List<InterviewQuestionDTO> allQuestions,
-        List<InterviewAnswerEntity> answers
+            List<InterviewQuestionDTO> allQuestions,
+            List<InterviewAnswerEntity> answers
     ) {
         if (allQuestions == null || allQuestions.isEmpty()) {
             // 如果没有题目数据，回退到仅显示已回答的题目
@@ -88,35 +88,35 @@ public class InterviewHistoryService {
 
         // 将答案按 questionIndex 索引
         java.util.Map<Integer, InterviewAnswerEntity> answerMap = answers.stream()
-            .collect(java.util.stream.Collectors.toMap(
-                InterviewAnswerEntity::getQuestionIndex,
-                a -> a,
-                (a1, a2) -> a1  // 如果有重复，取第一个
-            ));
+                .collect(java.util.stream.Collectors.toMap(
+                        InterviewAnswerEntity::getQuestionIndex,
+                        a -> a,
+                        (a1, a2) -> a1  // 如果有重复，取第一个
+                ));
 
         // 遍历所有题目，构建完整的答案详情列表
         return allQuestions.stream()
-            .map(question -> {
-                InterviewAnswerEntity answer = answerMap.get(question.questionIndex());
-                if (answer != null) {
-                    // 用户已回答，使用答案数据
-                    return interviewMapper.toAnswerDetailDTO(answer, extractKeyPoints(answer));
-                } else {
-                    // 用户未回答，构建空答案
-                    return new InterviewDetailDTO.AnswerDetailDTO(
-                        question.questionIndex(),
-                        question.question(),
-                        question.category(),
-                        null,  // userAnswer
-                        question.score() != null ? question.score() : 0,  // score
-                        question.feedback(),  // feedback
-                        null,  // referenceAnswer
-                        null,  // keyPoints
-                        null   // answeredAt
-                    );
-                }
-            })
-            .toList();
+                .map(question -> {
+                    InterviewAnswerEntity answer = answerMap.get(question.questionIndex());
+                    if (answer != null) {
+                        // 用户已回答，使用答案数据
+                        return interviewMapper.toAnswerDetailDTO(answer, extractKeyPoints(answer));
+                    } else {
+                        // 用户未回答，构建空答案
+                        return new InterviewDetailDTO.AnswerDetailDTO(
+                                question.questionIndex(),
+                                question.question(),
+                                question.category(),
+                                null,  // userAnswer
+                                question.score() != null ? question.score() : 0,  // score
+                                question.feedback(),  // feedback
+                                null,  // referenceAnswer
+                                null,  // keyPoints
+                                null   // answeredAt
+                        );
+                    }
+                })
+                .toList();
     }
 
     /**
@@ -159,4 +159,3 @@ public class InterviewHistoryService {
         }
     }
 }
-

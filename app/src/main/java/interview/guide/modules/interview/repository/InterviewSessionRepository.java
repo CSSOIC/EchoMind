@@ -27,12 +27,12 @@ public interface InterviewSessionRepository extends JpaRepository<InterviewSessi
      */
     @Query("SELECT s FROM InterviewSessionEntity s JOIN FETCH s.resume WHERE s.sessionId = :sessionId")
     Optional<InterviewSessionEntity> findBySessionIdWithResume(@Param("sessionId") String sessionId);
-    
+
     /**
      * 根据简历查找所有面试记录
      */
     List<InterviewSessionEntity> findByResumeOrderByCreatedAtDesc(ResumeEntity resume);
-    
+
     /**
      * 根据简历ID查找所有面试记录
      */
@@ -42,20 +42,20 @@ public interface InterviewSessionRepository extends JpaRepository<InterviewSessi
      * 根据简历ID查找最近的面试记录（用于历史题去重）
      */
     List<InterviewSessionEntity> findTop10ByResumeIdOrderByCreatedAtDesc(Long resumeId);
-    
+
     /**
      * 查找简历的未完成面试（CREATED或IN_PROGRESS状态）
      */
     Optional<InterviewSessionEntity> findFirstByResumeIdAndStatusInOrderByCreatedAtDesc(
-        Long resumeId, 
-        List<SessionStatus> statuses
+            Long resumeId,
+            List<SessionStatus> statuses
     );
-    
+
     /**
      * 根据简历ID和状态查找会话
      */
     Optional<InterviewSessionEntity> findByResumeIdAndStatusIn(
-        Long resumeId,
-        List<SessionStatus> statuses
+            Long resumeId,
+            List<SessionStatus> statuses
     );
 }

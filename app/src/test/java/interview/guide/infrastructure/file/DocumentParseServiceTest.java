@@ -38,7 +38,7 @@ class DocumentParseServiceTest {
     private TextCleaningService textCleaningService;
 
     @Mock
-    private FileStorageService fileStorageService;
+    private AliyunOssStorageService fileStorageService;
 
     @BeforeEach
     void setUp() {
@@ -266,7 +266,7 @@ class DocumentParseServiceTest {
 
     @Test
     @DisplayName("下载并解析文件 - 下载失败")
-    void testDownloadAndParseContentFailure() {
+    void testDownloadAndParseContentFailure() throws IOException {
         // Given
         String storageKey = "resumes/missing.txt";
         String originalFilename = "missing.txt";
@@ -288,7 +288,7 @@ class DocumentParseServiceTest {
 
     @Test
     @DisplayName("下载并解析文件 - 空字节数组")
-    void testDownloadAndParseEmptyContent() {
+    void testDownloadAndParseEmptyContent() throws IOException {
         // Given
         String storageKey = "resumes/empty.txt";
         String originalFilename = "empty.txt";

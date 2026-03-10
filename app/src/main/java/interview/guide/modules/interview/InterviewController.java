@@ -68,9 +68,8 @@ public class InterviewController {
         return Result.success(sessionService.getCurrentQuestionResponse(sessionId));
     }
 
-    /**
-     * 提交答案
-     */
+
+      /*提交答案
     @PostMapping("/api/interview/sessions/{sessionId}/answers")
     @RateLimit(dimensions = {RateLimit.Dimension.GLOBAL}, count = 10)
     public Result<SubmitAnswerResponse> submitAnswer(
@@ -82,8 +81,23 @@ public class InterviewController {
         SubmitAnswerRequest request = new SubmitAnswerRequest(sessionId, questionIndex, answer);
         SubmitAnswerResponse response = sessionService.submitAnswer(request);
         return Result.success(response);
+    }*/
+    /**
+     * 提交任何答案
+     */
+    @PostMapping("/api/interview/sessions/{sessionId}/answers")
+    @RateLimit(dimensions = {RateLimit.Dimension.GLOBAL}, count = 10)
+    public Result<SubmitAnswerResponse> submitAnswer(
+            @PathVariable String sessionId,
+            @RequestBody Map<String, Object> body) {
+        Integer questionIndex = (Integer) body.get("questionIndex");
+        String answer = (String) body.get("answer");
+        Integer addQuestionIndex=(Integer)body.get("addQuestionIndex");
+        log.info("提交答案: 会话{}, 问题{}", sessionId, questionIndex);
+        SubmitAnswerRequest request = new SubmitAnswerRequest(sessionId, questionIndex ,answer,addQuestionIndex);
+        SubmitAnswerResponse response = sessionService.submitAnswer(request);
+        return Result.success(response);
     }
-
     /**
      * 生成面试报告
      */
@@ -112,8 +126,9 @@ public class InterviewController {
             @RequestBody Map<String, Object> body) {
         Integer questionIndex = (Integer) body.get("questionIndex");
         String answer = (String) body.get("answer");
+        Integer addQuestionIndex=(Integer)body.get("addQuestionIndex");
         log.info("暂存答案: 会话{}, 问题{}", sessionId, questionIndex);
-        SubmitAnswerRequest request = new SubmitAnswerRequest(sessionId, questionIndex, answer);
+        SubmitAnswerRequest request = new SubmitAnswerRequest(sessionId, questionIndex, answer,addQuestionIndex);
         sessionService.saveAnswer(request);
         return Result.success(null);
     }

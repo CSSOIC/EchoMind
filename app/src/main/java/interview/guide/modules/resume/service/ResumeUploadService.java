@@ -4,7 +4,8 @@ import interview.guide.common.config.AppConfigProperties;
 import interview.guide.common.exception.BusinessException;
 import interview.guide.common.exception.ErrorCode;
 import interview.guide.common.model.AsyncTaskStatus;
-import interview.guide.infrastructure.file.FileStorageService;
+/*import interview.guide.infrastructure.file.FileStorageService*/
+import interview.guide.infrastructure.file.AliyunOssStorageService;
 import interview.guide.infrastructure.file.FileValidationService;
 import interview.guide.modules.interview.model.ResumeAnalysisResponse;
 import interview.guide.modules.resume.listener.AnalyzeStreamProducer;
@@ -15,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
 
@@ -29,13 +31,13 @@ import java.util.Optional;
 public class ResumeUploadService {
 
     private final ResumeParseService parseService;
-    private final FileStorageService storageService;
+    /*private final FileStorageService storageService;*/
     private final ResumePersistenceService persistenceService;
     private final AppConfigProperties appConfig;
     private final FileValidationService fileValidationService;
     private final AnalyzeStreamProducer analyzeStreamProducer;
     private final ResumeRepository resumeRepository;
-
+    private final AliyunOssStorageService storageService;
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
     /**
@@ -44,7 +46,7 @@ public class ResumeUploadService {
      * @param file 简历文件
      * @return 上传结果（分析将异步进行）
      */
-    public Map<String, Object> uploadAndAnalyze(org.springframework.web.multipart.MultipartFile file) {
+    public Map<String, Object> uploadAndAnalyze(org.springframework.web.multipart.MultipartFile file) throws IOException {
         // 1. 验证文件
         fileValidationService.validateFile(file, MAX_FILE_SIZE, "简历");
 

@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -41,7 +42,7 @@ public class ResumeController {
      */
     @PostMapping(value = "/api/resumes/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @RateLimit(dimensions = {RateLimit.Dimension.GLOBAL, RateLimit.Dimension.IP}, count = 5)
-    public Result<Map<String, Object>> uploadAndAnalyze(@RequestParam("file") MultipartFile file) {
+    public Result<Map<String, Object>> uploadAndAnalyze(@RequestParam("file") MultipartFile file) throws IOException {
         Map<String, Object> result = uploadService.uploadAndAnalyze(file);
         boolean isDuplicate = (Boolean) result.get("duplicate");
         if (isDuplicate) {

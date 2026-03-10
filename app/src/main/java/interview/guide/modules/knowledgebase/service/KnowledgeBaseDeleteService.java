@@ -3,7 +3,7 @@ package interview.guide.modules.knowledgebase.service;
 import interview.guide.common.exception.BusinessException;
 import interview.guide.common.exception.ErrorCode;
 import interview.guide.infrastructure.file.AliyunOssStorageService;
-import interview.guide.infrastructure.file.FileStorageService;
+/*import interview.guide.infrastructure.file.FileStorageService;*/
 import interview.guide.modules.knowledgebase.model.KnowledgeBaseEntity;
 import interview.guide.modules.knowledgebase.model.RagChatSessionEntity;
 import interview.guide.modules.knowledgebase.repository.KnowledgeBaseRepository;
@@ -27,7 +27,7 @@ public class KnowledgeBaseDeleteService {
     private final KnowledgeBaseRepository knowledgeBaseRepository;
     private final RagChatSessionRepository sessionRepository;
     private final KnowledgeBaseVectorService vectorService;
-    private final FileStorageService storageService;
+   /* private final FileStorageService storageService;*/
     private final AliyunOssStorageService ossStorageService;
     /**
      * 删除知识库

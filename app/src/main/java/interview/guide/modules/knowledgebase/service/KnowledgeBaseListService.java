@@ -3,7 +3,7 @@ package interview.guide.modules.knowledgebase.service;
 import interview.guide.common.exception.BusinessException;
 import interview.guide.common.exception.ErrorCode;
 import interview.guide.infrastructure.file.AliyunOssStorageService;
-import interview.guide.infrastructure.file.FileStorageService;
+/*import interview.guide.infrastructure.file.FileStorageService;*/
 import interview.guide.infrastructure.mapper.KnowledgeBaseMapper;
 import interview.guide.modules.knowledgebase.model.KnowledgeBaseEntity;
 import interview.guide.modules.knowledgebase.model.KnowledgeBaseListItemDTO;
@@ -33,7 +33,7 @@ public class KnowledgeBaseListService {
     private final KnowledgeBaseRepository knowledgeBaseRepository;
     private final RagChatMessageRepository ragChatMessageRepository;
     private final KnowledgeBaseMapper knowledgeBaseMapper;
-    private final FileStorageService fileStorageService;
+    /*private final FileStorageService fileStorageService;*/
     private final AliyunOssStorageService aliyunOssStorageService;
     /**
      * 获取知识库列表（支持状态过滤和排序）
