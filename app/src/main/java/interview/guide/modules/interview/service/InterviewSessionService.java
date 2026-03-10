@@ -12,6 +12,7 @@ import interview.guide.modules.interview.model.InterviewSessionDTO.SessionStatus
 import interview.guide.modules.interview.pojo.AddQuestionEntity;
 import interview.guide.modules.interview.pojo.DTO.AddQuestionDTO;
 import interview.guide.modules.interview.pojo.VO.AddQuestionVO;
+import interview.guide.modules.interview.repository.InterviewAddRepository;
 import interview.guide.modules.interview.repository.InterviewAnswerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +41,7 @@ public class InterviewSessionService {
     private final ObjectMapper objectMapper;
     private final EvaluateStreamProducer evaluateStreamProducer;
     private final InterviewAnswerRepository interviewAnswerRepository;
+    private final InterviewAddRepository interviewAddRepository;
 
     /**
      * 创建新的面试会话
@@ -301,21 +303,34 @@ public class InterviewSessionService {
             InterviewQuestionDTO answeredQuestion = question.withAnswer(request.answer());
             questions.set(index, answeredQuestion);
             // 移动到下一题
-            int newIndex = index + 1;
 
             // 检查是否全部完成
-            boolean hasNextQuestion = newIndex < questions.size();
-            InterviewQuestionDTO nextQuestion = hasNextQuestion ? questions.get(newIndex) : null;
+            boolean hasNextQuestion = true ;
+
 
             SessionStatus newStatus = hasNextQuestion ? SessionStatus.IN_PROGRESS : SessionStatus.COMPLETED;
 
             // 更新 Redis 缓存
             sessionCache.updateQuestions(request.sessionId(), questions);
-            sessionCache.updateCurrentIndex(request.sessionId(), newIndex);
+
             if (newStatus == SessionStatus.COMPLETED) {
                 sessionCache.updateSessionStatus(request.sessionId(), SessionStatus.COMPLETED);
             }
-
+            AddQuestionEntity addQuestion=AddQuestionEntity.builder()
+                    .addQuestionAnswer(request.answer())
+                    .addQuestion(question.question())
+                    .build();
+            AddQuestionDTO nextAddQuestion=questionService.generateAddQuestion(addQuestion);
+            nextAddQuestion.setQuestionIndex(index);
+            nextAddQuestion.setAddQuestionIndex(1);
+            persistenceService.SaveAddQuestion(nextAddQuestion);
+            InterviewQuestionDTO nextQuestion=InterviewQuestionDTO.builder()
+                    .question(nextAddQuestion.getAddQuestion())
+                    .isFollowUp(true)
+                    .parentQuestionIndex(index)
+                    .addQuestionIndex(1)
+                    .questionIndex(index)
+                    .build();
             // 保存答案到数据库
             try {
                 persistenceService.saveAnswer(
@@ -323,7 +338,6 @@ public class InterviewSessionService {
                         question.question(), question.category(),
                         request.answer(), 0, null  // 分数在报告生成时更新
                 );
-                persistenceService.updateCurrentQuestionIndex(request.sessionId(), newIndex);
                 persistenceService.updateSessionStatus(request.sessionId(),
                         newStatus == SessionStatus.COMPLETED
                                 ? InterviewSessionEntity.SessionStatus.COMPLETED
@@ -331,7 +345,7 @@ public class InterviewSessionService {
                 return new SubmitAnswerResponse(
                         hasNextQuestion,
                         nextQuestion,
-                        newIndex,
+                        request.questionIndex(),
                         1,
                         questions.size()
                 );
@@ -342,16 +356,19 @@ public class InterviewSessionService {
         }else if(request.addQuestionIndex()<QuestionConstants.MAX_ADD_QUESTION_NUM) {
             int newAddQuestionIndex= request.addQuestionIndex()+1;
 
-            AddQuestionEntity addQuestion = interviewAnswerRepository.findByQuestionIndexOrderByAddQuestionIndexDesc(request.questionIndex());
+            AddQuestionEntity addQuestion = interviewAddRepository.findByQuestionIndexOrderByAddQuestionIndexDesc(request.questionIndex());
             addQuestion.setAddQuestionAnswer(request.answer());
             persistenceService.updateAddQuestionAnswer(addQuestion);
             AddQuestionDTO nextAddQuestion=questionService.generateAddQuestion(addQuestion);
+            nextAddQuestion.setAddQuestionIndex(newAddQuestionIndex);
+            nextAddQuestion.setQuestionIndex(index);
             persistenceService.SaveAddQuestion(nextAddQuestion);
             InterviewQuestionDTO nextQuestion=InterviewQuestionDTO.builder()
                     .addQuestionIndex(newAddQuestionIndex)
                     .questionIndex(nextAddQuestion.questionIndex)
                     .isFollowUp(true)
                     .parentQuestionIndex(nextAddQuestion.questionIndex)
+                    .question(nextAddQuestion.getAddQuestion())
                     .build();
             return new SubmitAnswerResponse(
                     true,
@@ -377,7 +394,7 @@ public class InterviewSessionService {
             }
 // 保存答案到数据库
             try {
-                AddQuestionEntity addQuestion = interviewAnswerRepository.findByQuestionIndexOrderByAddQuestionIndexDesc(request.questionIndex());
+                AddQuestionEntity addQuestion = interviewAddRepository.findByQuestionIndexOrderByAddQuestionIndexDesc(request.questionIndex());
                 addQuestion.setAddQuestionAnswer(request.answer());
                 persistenceService.updateAddQuestionAnswer(addQuestion);
                 persistenceService.updateCurrentQuestionIndex(request.sessionId(), newIndex);
@@ -403,7 +420,7 @@ public class InterviewSessionService {
                     hasNextQuestion,
                     nextQuestion,
                     newIndex,
-                    3,
+                    0,
                     questions.size()
             );
         }
@@ -555,7 +572,7 @@ public class InterviewSessionService {
         if (addQuestionIndex >= QuestionConstants.MAX_ADD_QUESTION_NUM) {
             return new AddQuestionVO(false, null, questionNow.questionIndex(), QuestionConstants.MAX_ADD_QUESTION_NUM);
         } else {
-            AddQuestionEntity addQuestion = interviewAnswerRepository.findByQuestionIndexOrderByAddQuestionIndexDesc(questionIndex);
+            AddQuestionEntity addQuestion = interviewAddRepository.findByQuestionIndexOrderByAddQuestionIndexDesc(questionIndex);
             addQuestion.setAddQuestionAnswer(answer);
 
             AddQuestionDTO addQuestionDTO = questionService.generateAddQuestion(addQuestion);

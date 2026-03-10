@@ -1,5 +1,6 @@
 package interview.guide.modules.interview.pojo;
 
+import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,6 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@Entity
 public class AddQuestionEntity {
     @Id
     public int id;

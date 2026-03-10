@@ -1,4 +1,3 @@
-
 package interview.guide.modules.interview.repository;
 
 import interview.guide.modules.interview.model.InterviewAnswerEntity;
@@ -36,6 +35,6 @@ public interface InterviewAnswerRepository extends JpaRepository<InterviewAnswer
      */
     Optional<InterviewAnswerEntity> findBySession_SessionIdAndQuestionIndex(String sessionId, Integer questionIndex);
 
-    AddQuestionEntity findByQuestionIndexOrderByAddQuestionIndexDesc(Integer questionIndex);
+
 
 }
