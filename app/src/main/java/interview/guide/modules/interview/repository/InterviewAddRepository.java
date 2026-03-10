@@ -6,5 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface InterviewAddRepository extends JpaRepository<AddQuestionEntity,Integer> {
-
+    AddQuestionEntity findByQuestionIndexOrderByAddQuestionIndexDesc(Integer questionIndex);
 }

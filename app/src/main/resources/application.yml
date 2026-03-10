@@ -106,7 +106,7 @@ app:
 
   # RustFS (S3兼容) 存储配置
   storage:
-    endpoint: ${APP_STORAGE_ENDPOINT:}
+    endpoint: ${APP_STORAGE_ENDPOINT:https://oss-cn-beijing.aliyuncs.com}
     access-key: ${APP_STORAGE_ACCESS_KEY:}
     secret-key: ${APP_STORAGE_SECRET_KEY:}
     bucket: ${APP_STORAGE_BUCKET:take-out-behd}
