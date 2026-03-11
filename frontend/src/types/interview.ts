@@ -1,6 +1,7 @@
 // 面试相关类型定义
 
 export interface InterviewSession {
+  jobId: number;
   sessionId: string;
   resumeText: string;
   totalQuestions: number;
@@ -17,6 +18,9 @@ export interface InterviewQuestion {
   userAnswer: string | null;
   score: number | null;
   feedback: string | null;
+  isFollowUp?: boolean;
+  addQuestionIndex?: number;
+  parentQuestionIndex?: number | null;
 }
 
 export type QuestionType = 
@@ -27,12 +31,23 @@ export type QuestionType =
   | 'MYSQL' 
   | 'REDIS' 
   | 'SPRING' 
-  | 'SPRING_BOOT';
+  | 'SPRING_BOOT'
+  | 'HTML_CSS'
+  | 'JS_BASIC'
+  | 'FRONT_FRAMEWORK'
+  | 'BROWSER_NET'
+  | 'FRONT_ENGINEERING'
+  | 'TEST_CASE_DESIGN'
+  | 'TEST_AUTOMATION'
+  | 'TEST_PERFORMANCE'
+  | 'TEST_DB_CHECK'
+  | 'TEST_BUG_MANAGE';
 
 export interface CreateInterviewRequest {
   resumeText: string;
   questionCount: number;
   resumeId?: number;
+  jobId: number;
   forceCreate?: boolean;  // 是否强制创建新会话（忽略未完成的会话）
 }
 
@@ -40,12 +55,15 @@ export interface SubmitAnswerRequest {
   sessionId: string;
   questionIndex: number;
   answer: string;
+  addQuestionIndex: number;
 }
 
 export interface SubmitAnswerResponse {
   hasNextQuestion: boolean;
   nextQuestion: InterviewQuestion | null;
   currentIndex: number;
+  // 后端字段名为 addQuestionIndex（拼写如此）
+  addQuestionIndex?: number;
   totalQuestions: number;
 }
 

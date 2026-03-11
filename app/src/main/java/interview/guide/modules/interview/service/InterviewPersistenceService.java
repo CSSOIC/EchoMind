@@ -24,6 +24,9 @@ import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDateTime;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.Optional;
 
@@ -341,6 +344,26 @@ public class InterviewPersistenceService {
                 .questionIndex(nextAddQuestion.questionIndex)
                 .addQuestionIndex(nextAddQuestion.getAddQuestionIndex())
                 .build();
-        interviewAddRepository.save(ad);
+        // #region agent log
+        try {
+            Files.writeString(
+                    Path.of("debug-bfb5dd.log"),
+                    ("{\"sessionId\":\"bfb5dd\",\"runId\":\"pre-fix\",\"hypothesisId\":\"G_add_question_pk_generation\",\"location\":\"app/src/main/java/interview/guide/modules/interview/service/InterviewPersistenceService.java:SaveAddQuestion\",\"message\":\"before save add question\",\"data\":{\"entityId\":" + (ad.getId() == null ? "null" : ad.getId()) + ",\"questionIndex\":" + ad.getQuestionIndex() + ",\"addQuestionIndex\":" + ad.getAddQuestionIndex() + "},\"timestamp\":" + System.currentTimeMillis() + "}\n"),
+                    StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND
+            );
+        } catch (Exception ignored) {
+        }
+        // #endregion
+        AddQuestionEntity saved = interviewAddRepository.save(ad);
+        // #region agent log
+        try {
+            Files.writeString(
+                    Path.of("debug-bfb5dd.log"),
+                    ("{\"sessionId\":\"bfb5dd\",\"runId\":\"pre-fix\",\"hypothesisId\":\"G_add_question_pk_generation\",\"location\":\"app/src/main/java/interview/guide/modules/interview/service/InterviewPersistenceService.java:SaveAddQuestion\",\"message\":\"after save add question\",\"data\":{\"savedId\":" + (saved.getId() == null ? "null" : saved.getId()) + "},\"timestamp\":" + System.currentTimeMillis() + "}\n"),
+                    StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND
+            );
+        } catch (Exception ignored) {
+        }
+        // #endregion
     }
 }

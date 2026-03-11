@@ -25,6 +25,7 @@ interface InterviewProps {
 export default function Interview({ resumeText, resumeId, onBack, onInterviewComplete }: InterviewProps) {
   const [stage, setStage] = useState<InterviewStage>('config');
   const [questionCount, setQuestionCount] = useState(8);
+  const [jobId, setJobId] = useState(1); // 默认后端工程师（与后端 JobConstants 对齐）
   const [session, setSession] = useState<InterviewSession | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState<InterviewQuestion | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -115,10 +116,14 @@ export default function Interview({ resumeText, resumeId, onBack, onInterviewCom
 
         try {
       // 创建新面试（如果 forceCreateNew 为 true，则强制创建新会话）
+      // #region agent log
+      fetch('http://127.0.0.1:7759/ingest/2dd834a5-4ddb-4839-b6a6-921fb398046f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'bfb5dd'},body:JSON.stringify({sessionId:'bfb5dd',runId:'pre-fix',hypothesisId:'A_jobId_missing',location:'frontend/src/pages/InterviewPage.tsx:startInterview',message:'createSession request',data:{questionCount,jobId,resumeId:resumeId ?? null,resumeTextLen:resumeText?.length ?? 0,forceCreate:forceCreateNew},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       const newSession = await interviewApi.createSession({
         resumeText,
         questionCount,
         resumeId,
+        jobId,
         forceCreate: forceCreateNew
       });
 
@@ -171,21 +176,35 @@ export default function Interview({ resumeText, resumeId, onBack, onInterviewCom
     setMessages(prev => [...prev, userMessage]);
 
     try {
+      const addQuestionIndex = currentQuestion.addQuestionIndex ?? 0;
+      // #region agent log
+      fetch('http://127.0.0.1:7759/ingest/2dd834a5-4ddb-4839-b6a6-921fb398046f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'bfb5dd'},body:JSON.stringify({sessionId:'bfb5dd',runId:'pre-fix',hypothesisId:'B_followup_protocol',location:'frontend/src/pages/InterviewPage.tsx:handleSubmitAnswer',message:'submitAnswer request',data:{sessionId:session.sessionId,questionIndex:currentQuestion.questionIndex,addQuestionIndex:currentQuestion.addQuestionIndex,answerLen:answer.trim().length,isFollowUp:currentQuestion.isFollowUp ?? false},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       const response = await interviewApi.submitAnswer({
         sessionId: session.sessionId,
         questionIndex: currentQuestion.questionIndex,
-        answer: answer.trim()
+        answer: answer.trim(),
+        addQuestionIndex:addQuestionIndex
       });
 
       setAnswer('');
 
       if (response.hasNextQuestion && response.nextQuestion) {
-        setCurrentQuestion(response.nextQuestion);
+        // #region agent log
+        fetch('http://127.0.0.1:7759/ingest/2dd834a5-4ddb-4839-b6a6-921fb398046f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'bfb5dd'},body:JSON.stringify({sessionId:'bfb5dd',runId:'pre-fix',hypothesisId:'C_followup_response_shape',location:'frontend/src/pages/InterviewPage.tsx:handleSubmitAnswer',message:'submitAnswer response nextQuestion',data:{hasNextQuestion:response.hasNextQuestion,currentIndex:response.currentIndex,totalQuestions:response.totalQuestions,addQuestionIndex:response.addQuestionIndex ?? null,nextIsFollowUp:response.nextQuestion.isFollowUp ?? null,nextAddQuestionIndex:response.nextQuestion.addQuestionIndex ?? null,nextQuestionIndex:response.nextQuestion.questionIndex},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        // 后端追问次数字段在 response 上叫 addQuestionIndex（拼写如此），而 nextQuestion 里不一定带 addQuestionIndex
+        // 为了让下一次提交能正确从 1→2→进入下一主问题，这里把次数写回 currentQuestion
+        const normalizedNextQuestion = {
+          ...response.nextQuestion,
+          addQuestionIndex: response.nextQuestion.addQuestionIndex ?? response.addQuestionIndex ?? 0,
+        };
+        setCurrentQuestion(normalizedNextQuestion);
         setMessages(prev => [...prev, {
           type: 'interviewer',
-          content: response.nextQuestion!.question,
-          category: response.nextQuestion!.category,
-          questionIndex: response.nextQuestion!.questionIndex
+          content: normalizedNextQuestion.question,
+          category: normalizedNextQuestion.isFollowUp ? `追问(${normalizedNextQuestion.addQuestionIndex ?? 0})` : normalizedNextQuestion.category,
+          questionIndex: normalizedNextQuestion.questionIndex
         }]);
       } else {
         // 面试已完成，评估将在后台进行，跳转到面试记录页
@@ -222,6 +241,8 @@ export default function Interview({ resumeText, resumeId, onBack, onInterviewCom
       <InterviewConfigPanel
         questionCount={questionCount}
         onQuestionCountChange={setQuestionCount}
+        jobId={jobId}
+        onJobIdChange={setJobId}
         onStart={startInterview}
         isCreating={isCreating}
         checkingUnfinished={checkingUnfinished}

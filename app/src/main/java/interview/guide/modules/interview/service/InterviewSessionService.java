@@ -20,6 +20,9 @@ import org.springframework.stereotype.Service;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -296,6 +299,17 @@ public class InterviewSessionService {
         if (index < 0 || index >= questions.size()) {
             throw new BusinessException(ErrorCode.INTERVIEW_QUESTION_NOT_FOUND, "无效的问题索引: " + index);
         }
+
+        // #region agent log
+        try {
+            Files.writeString(
+                    Path.of("debug-bfb5dd.log"),
+                    ("{\"sessionId\":\"bfb5dd\",\"runId\":\"pre-fix\",\"hypothesisId\":\"H_followup_counter_not_increasing\",\"location\":\"app/src/main/java/interview/guide/modules/interview/service/InterviewSessionService.java:submitAnswer\",\"message\":\"submitAnswer received\",\"data\":{\"questionIndex\":" + index + ",\"addQuestionIndex\":" + request.addQuestionIndex() + "},\"timestamp\":" + System.currentTimeMillis() + "}\n"),
+                    StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND
+            );
+        } catch (Exception ignored) {
+        }
+        // #endregion
 
         // 更新问题答案
         if(request.addQuestionIndex()==0) {

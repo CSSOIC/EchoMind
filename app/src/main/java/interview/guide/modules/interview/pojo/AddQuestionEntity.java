@@ -1,6 +1,8 @@
 package interview.guide.modules.interview.pojo;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,7 +16,8 @@ import lombok.NoArgsConstructor;
 @Entity
 public class AddQuestionEntity {
     @Id
-    public int id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     public int addQuestionIndex;
     public int questionIndex;
     public String addQuestionAnswer;

@@ -7,6 +7,6 @@ public record SubmitAnswerResponse(
     boolean hasNextQuestion,
     InterviewQuestionDTO nextQuestion,
     int currentIndex,
-    int addQestionIndex,
+    int addQuestionIndex,
     int totalQuestions
 ) {}

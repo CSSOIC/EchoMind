@@ -15,6 +15,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URLEncoder;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.zip.Inflater;
@@ -70,9 +73,21 @@ public class InterviewController {
             @RequestBody Map<String, Object> body) {
         Integer questionIndex = (Integer) body.get("questionIndex");
         String answer = (String) body.get("answer");
-        Integer addQuestionIndex=(Integer)body.get("addQuestionIndex");
+        Integer addQuestionIndex = (Integer) body.get("addQuestionIndex");
+        int safeAddQuestionIndex = addQuestionIndex == null ? 0 : addQuestionIndex;
         log.info("提交答案: 会话{}, 问题{}", sessionId, questionIndex);
-        SubmitAnswerRequest request = new SubmitAnswerRequest(sessionId, questionIndex ,answer,addQuestionIndex);
+        log.info("addQuestionIndex:{}",safeAddQuestionIndex);
+        // #region agent log
+        try {
+            Files.writeString(
+                    Path.of("debug-bfb5dd.log"),
+                    ("{\"sessionId\":\"bfb5dd\",\"runId\":\"pre-fix\",\"hypothesisId\":\"D_addQuestionIndex_null\",\"location\":\"app/src/main/java/interview/guide/modules/interview/InterviewController.java:submitAnswer\",\"message\":\"submitAnswer body parsed\",\"data\":{\"hasAddQuestionIndexKey\":" + body.containsKey("addQuestionIndex") + ",\"addQuestionIndexRaw\":" + (addQuestionIndex == null ? "null" : addQuestionIndex) + ",\"safeAddQuestionIndex\":" + safeAddQuestionIndex + ",\"questionIndex\":" + (questionIndex == null ? "null" : questionIndex) + ",\"answerLen\":" + (answer == null ? 0 : answer.length()) + "},\"timestamp\":" + System.currentTimeMillis() + "}\n"),
+                    StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND
+            );
+        } catch (Exception ignored) {
+        }
+        // #endregion
+        SubmitAnswerRequest request = new SubmitAnswerRequest(sessionId, questionIndex, answer, safeAddQuestionIndex);
         SubmitAnswerResponse response = sessionService.submitAnswer(request);
         return Result.success(response);
     }

@@ -21,6 +21,9 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -89,7 +92,7 @@ public class InterviewQuestionService {
             ChatClient.Builder chatClientBuilder,
             StructuredOutputInvoker structuredOutputInvoker,
             @Value("classpath:prompts/interview-question-system.st") Resource systemPromptResource,
-            @Value("classpath:prompts/interview-question-system.st") Resource systemPromptResourceAdd,
+            @Value("classpath:prompts/interview-add-question-system.st") Resource systemPromptResourceAdd,
             @Value("classpath:prompts/interview-question-user.st") Resource userPromptResource,
             @Value("classpath:prompts/interview-add-question-user.st") Resource userPromptResourceAdd,
 
@@ -127,6 +130,25 @@ public class InterviewQuestionService {
             // 加载用户提示词并填充变量
             Map<String, Object> variables = new HashMap<>();
             variables.put("questionCount", questionCount);
+            // 重要：interview-question-user.st 同时包含后端/前端/测试的所有 count 占位符
+            // 为避免“岗位无关变量缺失”导致模板渲染异常，这里统一设置默认值，再按岗位覆盖。
+            variables.put("projectCount", 0);
+            variables.put("mysqlCount", 0);
+            variables.put("redisCount", 0);
+            variables.put("javaBasicCount", 0);
+            variables.put("javaCollectionCount", 0);
+            variables.put("javaConcurrentCount", 0);
+            variables.put("springCount", 0);
+            variables.put("htmlCssCount", 0);
+            variables.put("jsBasicCount", 0);
+            variables.put("frameworkCount", 0);
+            variables.put("browserNetCount", 0);
+            variables.put("engineeringCount", 0);
+            variables.put("caseDesignCount", 0);
+            variables.put("automationCount", 0);
+            variables.put("performanceCount", 0);
+            variables.put("dbCheckCount", 0);
+            variables.put("bugManageCount", 0);
 // 按岗位类型强转并封装变量（修正后）
             if (jobId == JobConstants.BackJob) {
                 BackQuestionDistribution backQuestionDistribution = (BackQuestionDistribution) distribution;
@@ -195,6 +217,16 @@ public class InterviewQuestionService {
             //加载系统提示词
             String systemPrompt = systemPromptTemplate.render(variables1);
 
+            // #region agent log
+            try {
+                Files.writeString(
+                        Path.of("debug-bfb5dd.log"),
+                        ("{\"sessionId\":\"bfb5dd\",\"runId\":\"pre-fix\",\"hypothesisId\":\"E_template_missing_vars\",\"location\":\"app/src/main/java/interview/guide/modules/interview/service/InterviewQuestionService.java:generateQuestions\",\"message\":\"prompt variables prepared\",\"data\":{\"jobId\":" + jobId + ",\"questionCount\":" + questionCount + ",\"resumeTextLen\":" + (resumeText == null ? 0 : resumeText.length()) + ",\"counts\":{\"projectCount\":" + variables.get("projectCount") + ",\"mysqlCount\":" + variables.get("mysqlCount") + ",\"redisCount\":" + variables.get("redisCount") + ",\"javaBasicCount\":" + variables.get("javaBasicCount") + ",\"javaCollectionCount\":" + variables.get("javaCollectionCount") + ",\"javaConcurrentCount\":" + variables.get("javaConcurrentCount") + ",\"springCount\":" + variables.get("springCount") + ",\"htmlCssCount\":" + variables.get("htmlCssCount") + ",\"jsBasicCount\":" + variables.get("jsBasicCount") + ",\"frameworkCount\":" + variables.get("frameworkCount") + ",\"browserNetCount\":" + variables.get("browserNetCount") + ",\"engineeringCount\":" + variables.get("engineeringCount") + ",\"caseDesignCount\":" + variables.get("caseDesignCount") + ",\"automationCount\":" + variables.get("automationCount") + ",\"performanceCount\":" + variables.get("performanceCount") + ",\"dbCheckCount\":" + variables.get("dbCheckCount") + ",\"bugManageCount\":" + variables.get("bugManageCount") + "}},\"timestamp\":" + System.currentTimeMillis() + "}\n"),
+                        StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND
+                );
+            } catch (Exception ignored) {
+            }
+            // #endregion
             String userPrompt = userPromptTemplate.render(variables);
 
 
@@ -394,11 +426,28 @@ public class InterviewQuestionService {
      */
     public AddQuestionDTO generateAddQuestion(AddQuestionEntity addQuestion){
         Map<String,Object>variables=new HashMap<>();
-        variables.put("question",addQuestion.getAddQuestion());
-        variables.put("questionAnswer",addQuestion.getAddQuestionAnswer());
+        // 注意：interview-add-question-user.st 里使用的占位符是
+        // {question} {questionAnswer} 以及 {addQuestion} {addQuestionAnswer}
+        // 这里为缺省值兜底，避免模板渲染时报 “Missing variable names”
+        String question = addQuestion == null ? "" : (addQuestion.getAddQuestion() == null ? "" : addQuestion.getAddQuestion());
+        String questionAnswer = addQuestion == null ? "" : (addQuestion.getAddQuestionAnswer() == null ? "" : addQuestion.getAddQuestionAnswer());
+        variables.put("question", question);
+        variables.put("questionAnswer", questionAnswer);
+        variables.put("addQuestion", "");
+        variables.put("addQuestionAnswer", "");
+        // #region agent log
+        try {
+            Files.writeString(
+                    Path.of("debug-bfb5dd.log"),
+                    ("{\"sessionId\":\"bfb5dd\",\"runId\":\"pre-fix\",\"hypothesisId\":\"F_add_question_template_vars\",\"location\":\"app/src/main/java/interview/guide/modules/interview/service/InterviewQuestionService.java:generateAddQuestion\",\"message\":\"add-question prompt variables prepared\",\"data\":{\"questionLen\":" + question.length() + ",\"answerLen\":" + questionAnswer.length() + ",\"hasAddQuestionVars\":true},\"timestamp\":" + System.currentTimeMillis() + "}\n"),
+                    StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND
+            );
+        } catch (Exception ignored) {
+        }
+        // #endregion
         String userPrompt= userPromptTemplateAdd.render(variables);
         String systemPrompt = systemPromptTemplateAdd.render();
-        String systemPromptWithFormat = systemPrompt + "\n\n" + outputConverter.getFormat();
+        String systemPromptWithFormat = systemPrompt + "\n\n" + outputConverterAdd.getFormat();
         AddQuestionDTO addQuestionDTO;
         try {
             addQuestionDTO=structuredOutputInvoker.invoke(
