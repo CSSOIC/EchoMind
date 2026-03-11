@@ -35,15 +35,46 @@ export const interviewApi = {
   /**
    * 提交答案
    */
+  // async submitAnswer(req: SubmitAnswerRequest): Promise<SubmitAnswerResponse> {
+  //   return request.post<SubmitAnswerResponse>(
+  //     `/api/interview/sessions/${req.sessionId}/answers`,
+  //     { questionIndex: req.questionIndex, answer: req.answer },
+  //     {
+  //       timeout: 180000, // 3分钟超时
+  //     }
+  //   );
+  // },
+
+
   async submitAnswer(req: SubmitAnswerRequest): Promise<SubmitAnswerResponse> {
-    return request.post<SubmitAnswerResponse>(
-      `/api/interview/sessions/${req.sessionId}/answers`,
-      { questionIndex: req.questionIndex, answer: req.answer },
-      {
-        timeout: 180000, // 3分钟超时
-      }
-    );
+      return request.post<SubmitAnswerResponse>(
+          `/api/interview/sessions/${req.sessionId}/answers`,
+          {
+              questionIndex: req.questionIndex,
+              answer: req.answer,
+              addQuestionIndex: req.addQuestionIndex,
+          },
+          {
+              timeout: 180000, // 3 分钟超时
+          }
+      );
   },
+// ... existing code ...
+    /**
+     * 暂存答案（不进入下一题）
+     */
+    async saveAnswer(req: SubmitAnswerRequest): Promise<void> {
+        return request.put<void>(
+            `/api/interview/sessions/${req.sessionId}/answers`,
+            {
+                questionIndex: req.questionIndex,
+                answer: req.answer,
+                addQuestionIndex: req.addQuestionIndex,
+            }
+        );
+    },
+
+
 
   /**
    * 获取面试报告
@@ -69,12 +100,12 @@ export const interviewApi = {
   /**
    * 暂存答案（不进入下一题）
    */
-  async saveAnswer(req: SubmitAnswerRequest): Promise<void> {
-    return request.put<void>(
-      `/api/interview/sessions/${req.sessionId}/answers`,
-      { questionIndex: req.questionIndex, answer: req.answer }
-    );
-  },
+  // async saveAnswer(req: SubmitAnswerRequest): Promise<void> {
+  //   return request.put<void>(
+  //     `/api/interview/sessions/${req.sessionId}/answers`,
+  //     { questionIndex: req.questionIndex, answer: req.answer }
+  //   );
+  // },
 
   /**
    * 提前交卷

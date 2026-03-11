@@ -370,7 +370,8 @@ public class InterviewSessionService {
         }else if(request.addQuestionIndex()<QuestionConstants.MAX_ADD_QUESTION_NUM) {
             int newAddQuestionIndex= request.addQuestionIndex()+1;
 
-            AddQuestionEntity addQuestion = interviewAddRepository.findByQuestionIndexOrderByAddQuestionIndexDesc(request.questionIndex());
+            List<AddQuestionEntity>list = interviewAddRepository.findByQuestionIndexOrderByAddQuestionIndexDesc(request.questionIndex());
+            AddQuestionEntity addQuestion=list.get(0);
             addQuestion.setAddQuestionAnswer(request.answer());
             persistenceService.updateAddQuestionAnswer(addQuestion);
             AddQuestionDTO nextAddQuestion=questionService.generateAddQuestion(addQuestion);
@@ -408,7 +409,9 @@ public class InterviewSessionService {
             }
 // 保存答案到数据库
             try {
-                AddQuestionEntity addQuestion = interviewAddRepository.findByQuestionIndexOrderByAddQuestionIndexDesc(request.questionIndex());
+
+                 List<AddQuestionEntity>list = interviewAddRepository.findByQuestionIndexOrderByAddQuestionIndexDesc(request.questionIndex());
+                AddQuestionEntity addQuestion=list.get(0);
                 addQuestion.setAddQuestionAnswer(request.answer());
                 persistenceService.updateAddQuestionAnswer(addQuestion);
                 persistenceService.updateCurrentQuestionIndex(request.sessionId(), newIndex);
@@ -586,7 +589,8 @@ public class InterviewSessionService {
         if (addQuestionIndex >= QuestionConstants.MAX_ADD_QUESTION_NUM) {
             return new AddQuestionVO(false, null, questionNow.questionIndex(), QuestionConstants.MAX_ADD_QUESTION_NUM);
         } else {
-            AddQuestionEntity addQuestion = interviewAddRepository.findByQuestionIndexOrderByAddQuestionIndexDesc(questionIndex);
+            List<AddQuestionEntity>list = interviewAddRepository.findByQuestionIndexOrderByAddQuestionIndexDesc(questionIndex);
+            AddQuestionEntity addQuestion=list.get(0);
             addQuestion.setAddQuestionAnswer(answer);
 
             AddQuestionDTO addQuestionDTO = questionService.generateAddQuestion(addQuestion);

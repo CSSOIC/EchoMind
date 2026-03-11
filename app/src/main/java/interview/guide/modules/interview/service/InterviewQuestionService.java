@@ -84,8 +84,8 @@ public class InterviewQuestionService {
     private record QuestionDTO(
         String question,
         String type,
-        String category,
-        List<String> followUps
+        String category
+//        List<String> followUps
     ) {}
     
     public InterviewQuestionService(
@@ -325,17 +325,17 @@ public class InterviewQuestionService {
             int mainQuestionIndex = index;
             questions.add(InterviewQuestionDTO.create(index++, q.question(), type, q.category(), false, null));
 
-            List<String> followUps = sanitizeFollowUps(q.followUps());
-            for (int i = 0; i < followUps.size(); i++) {
-                questions.add(InterviewQuestionDTO.create(
-                    index++,
-                    followUps.get(i),
-                    type,
-                    buildFollowUpCategory(q.category(), i + 1),
-                    true,
-                    mainQuestionIndex
-                ));
-            }
+//            List<String> followUps = sanitizeFollowUps(q.followUps());
+//            for (int i = 0; i < followUps.size(); i++) {
+//                questions.add(InterviewQuestionDTO.create(
+//                    index++,
+//                    followUps.get(i),
+//                    type,
+//                    buildFollowUpCategory(q.category(), i + 1),
+//                    true,
+//                    mainQuestionIndex
+//                ));
+//            }
         }
         
         return questions;

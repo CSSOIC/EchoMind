@@ -197,7 +197,8 @@ export default function Interview({ resumeText, resumeId, onBack, onInterviewCom
         // 为了让下一次提交能正确从 1→2→进入下一主问题，这里把次数写回 currentQuestion
         const normalizedNextQuestion = {
           ...response.nextQuestion,
-          addQuestionIndex: response.nextQuestion.addQuestionIndex ?? response.addQuestionIndex ?? 0,
+            isFollowUp:response.addQuestionIndex==0?false:true,
+          addQuestionIndex: response.addQuestionIndex ?? response.addQuestionIndex ?? 0,
         };
         setCurrentQuestion(normalizedNextQuestion);
         setMessages(prev => [...prev, {

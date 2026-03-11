@@ -1,9 +1,6 @@
 package interview.guide.modules.interview.pojo;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,6 +17,8 @@ public class AddQuestionEntity {
     private Long id;
     public int addQuestionIndex;
     public int questionIndex;
+    @Column(length = 2000)
     public String addQuestionAnswer;
+    @Column(length = 2000)
     public String addQuestion;
 }
