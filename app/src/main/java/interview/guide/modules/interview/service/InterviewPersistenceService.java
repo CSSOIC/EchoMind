@@ -7,12 +7,16 @@ import interview.guide.modules.interview.model.InterviewAnswerEntity;
 import interview.guide.modules.interview.model.InterviewQuestionDTO;
 import interview.guide.modules.interview.model.InterviewReportDTO;
 import interview.guide.modules.interview.model.InterviewSessionEntity;
+import interview.guide.modules.interview.pojo.AddQuestionEntity;
+import interview.guide.modules.interview.pojo.DTO.AddQuestionDTO;
+import interview.guide.modules.interview.repository.InterviewAddRepository;
 import interview.guide.modules.interview.repository.InterviewAnswerRepository;
 import interview.guide.modules.interview.repository.InterviewSessionRepository;
 import interview.guide.modules.resume.model.ResumeEntity;
 import interview.guide.modules.resume.repository.ResumeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
@@ -20,6 +24,9 @@ import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDateTime;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,6 +43,8 @@ public class InterviewPersistenceService {
     private final InterviewAnswerRepository answerRepository;
     private final ResumeRepository resumeRepository;
     private final ObjectMapper objectMapper;
+    private final InterviewAddRepository interviewAddRepository;
+
     
     /**
      * 保存新的面试会话
@@ -43,7 +52,7 @@ public class InterviewPersistenceService {
     @Transactional(rollbackFor = Exception.class)
     public InterviewSessionEntity saveSession(String sessionId, Long resumeId, 
                                               int totalQuestions, 
-                                              List<InterviewQuestionDTO> questions) {
+                                              List<InterviewQuestionDTO> questions,int jobId) {
         try {
             Optional<ResumeEntity> resumeOpt = resumeRepository.findById(resumeId);
             if (resumeOpt.isEmpty()) {
@@ -53,6 +62,7 @@ public class InterviewPersistenceService {
             InterviewSessionEntity session = new InterviewSessionEntity();
             session.setSessionId(sessionId);
             session.setResume(resumeOpt.get());
+            session.setJobId(jobId);
             session.setTotalQuestions(totalQuestions);
             session.setCurrentQuestionIndex(0);
             session.setStatus(InterviewSessionEntity.SessionStatus.CREATED);
@@ -322,5 +332,38 @@ public class InterviewPersistenceService {
             .distinct()
             .limit(30) // 核心改动：只保留最近的 30 道题
             .toList();
+    }
+
+    public void updateAddQuestionAnswer(AddQuestionEntity addQuestion) {
+        interviewAddRepository.save(addQuestion);
+    }
+
+    public void SaveAddQuestion(AddQuestionDTO nextAddQuestion) {
+        AddQuestionEntity ad=AddQuestionEntity.builder()
+                .addQuestion(nextAddQuestion.getAddQuestion())
+                .questionIndex(nextAddQuestion.questionIndex)
+                .addQuestionIndex(nextAddQuestion.getAddQuestionIndex())
+                .build();
+        // #region agent log
+        try {
+            Files.writeString(
+                    Path.of("debug-bfb5dd.log"),
+                    ("{\"sessionId\":\"bfb5dd\",\"runId\":\"pre-fix\",\"hypothesisId\":\"G_add_question_pk_generation\",\"location\":\"app/src/main/java/interview/guide/modules/interview/service/InterviewPersistenceService.java:SaveAddQuestion\",\"message\":\"before save add question\",\"data\":{\"entityId\":" + (ad.getId() == null ? "null" : ad.getId()) + ",\"questionIndex\":" + ad.getQuestionIndex() + ",\"addQuestionIndex\":" + ad.getAddQuestionIndex() + "},\"timestamp\":" + System.currentTimeMillis() + "}\n"),
+                    StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND
+            );
+        } catch (Exception ignored) {
+        }
+        // #endregion
+        AddQuestionEntity saved = interviewAddRepository.save(ad);
+        // #region agent log
+        try {
+            Files.writeString(
+                    Path.of("debug-bfb5dd.log"),
+                    ("{\"sessionId\":\"bfb5dd\",\"runId\":\"pre-fix\",\"hypothesisId\":\"G_add_question_pk_generation\",\"location\":\"app/src/main/java/interview/guide/modules/interview/service/InterviewPersistenceService.java:SaveAddQuestion\",\"message\":\"after save add question\",\"data\":{\"savedId\":" + (saved.getId() == null ? "null" : saved.getId()) + "},\"timestamp\":" + System.currentTimeMillis() + "}\n"),
+                    StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND
+            );
+        } catch (Exception ignored) {
+        }
+        // #endregion
     }
 }

@@ -4,6 +4,8 @@ import type {InterviewSession} from '../types/interview';
 interface InterviewConfigPanelProps {
   questionCount: number;
   onQuestionCountChange: (count: number) => void;
+  jobId: number;
+  onJobIdChange: (jobId: number) => void;
   onStart: () => void;
   isCreating: boolean;
   checkingUnfinished: boolean;
@@ -21,6 +23,8 @@ interface InterviewConfigPanelProps {
 export default function InterviewConfigPanel({
   questionCount,
   onQuestionCountChange,
+  jobId,
+  onJobIdChange,
   onStart,
   isCreating,
   checkingUnfinished,
@@ -32,6 +36,11 @@ export default function InterviewConfigPanel({
   error
 }: InterviewConfigPanelProps) {
   const questionCounts = [6, 8, 10, 12, 15];
+  const jobOptions = [
+    { id: 1, label: '后端工程师' },
+    { id: 0, label: '前端工程师' },
+    { id: 2, label: '测试工程师' },
+  ];
 
   return (
       <motion.div
@@ -119,6 +128,29 @@ export default function InterviewConfigPanel({
         </AnimatePresence>
 
         <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
+              面试岗位
+            </label>
+            <div className="grid grid-cols-3 gap-3">
+              {jobOptions.map((opt) => (
+                <motion.button
+                  key={opt.id}
+                  onClick={() => onJobIdChange(opt.id)}
+                  className={`px-4 py-3 rounded-xl font-medium transition-all ${
+                    jobId === opt.id
+                      ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30'
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                  }`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  {opt.label}
+                </motion.button>
+              ))}
+            </div>
+          </div>
+
           <div>
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
               题目数量

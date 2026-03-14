@@ -1,10 +1,15 @@
 package interview.guide.modules.interview.service;
 
 import interview.guide.common.ai.StructuredOutputInvoker;
+import interview.guide.common.constant.JobConstants;
 import interview.guide.common.exception.BusinessException;
 import interview.guide.common.exception.ErrorCode;
+import interview.guide.modules.interview.Util.QuestionUtil;
 import interview.guide.modules.interview.model.InterviewQuestionDTO;
 import interview.guide.modules.interview.model.InterviewQuestionDTO.QuestionType;
+import interview.guide.modules.interview.pojo.*;
+import interview.guide.modules.interview.pojo.DTO.AddQuestionDTO;
+import interview.guide.modules.interview.pojo.VO.AddQuestionVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
@@ -16,6 +21,9 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -33,20 +41,41 @@ public class InterviewQuestionService {
     
     private final ChatClient chatClient;
     private final PromptTemplate systemPromptTemplate;
+    private final PromptTemplate systemPromptTemplateAdd;
     private final PromptTemplate userPromptTemplate;
+    private final PromptTemplate userPromptTemplateAdd;
     private final BeanOutputConverter<QuestionListDTO> outputConverter;
+    private final BeanOutputConverter<AddQuestionDTO> outputConverterAdd;
     private final StructuredOutputInvoker structuredOutputInvoker;
     private final int followUpCount;
     
     // 问题类型权重分配（按优先级）
     private static final double PROJECT_RATIO = 0.20;      // 20% 项目经历
-    private static final double MYSQL_RATIO = 0.20;        // 20% MySQL
-    private static final double REDIS_RATIO = 0.20;        // 20% Redis
-    private static final double JAVA_BASIC_RATIO = 0.10;   // 10% Java基础
-    private static final double JAVA_COLLECTION_RATIO = 0.10; // 10% 集合
-    private static final double JAVA_CONCURRENT_RATIO = 0.10; // 10% 并发
+    //后端
+
+    private static final double Back_MYSQL_RATIO = 0.20;        // 20% MySQL
+    private static final double Back_REDIS_RATIO = 0.20;        // 20% Redis
+    private static final double Back_JAVA_BASIC_RATIO = 0.10;        // 10% Java基础
+    private static final double Back_JAVA_COLLECTION_RATIO = 0.10; // 10% 集合
+    private static final double Back_JAVA_CONCURRENT_RATIO = 0.10; // 10% 并发
+    // 前端（核心考核项调整为前端专属，变量名加Front_前缀）
+    private static final double Front_HTML_CSS_RATIO = 0.20;          // 20% HTML/CSS
+    private static final double Front_JS_BASIC_RATIO = 0.20;          // 20% JavaScript基础
+    private static final double Front_FRAMEWORK_RATIO = 0.15;         // 15% 前端框架(Vue/React)
+    private static final double Front_BROWSER_NET_RATIO = 0.15;       // 15% 浏览器/网络
+    private static final double Front_ENGINEERING_RATIO = 0.10;       // 10% 工程化(Webpack/TS)
+
+    // 测试（核心考核项调整为测试专属，变量名加Test_前缀）
+    private static final double Test_CASE_DESIGN_RATIO = 0.20;        // 20% 测试用例设计
+    private static final double Test_AUTOMATION_RATIO = 0.20;         // 20% 自动化测试
+    private static final double Test_PERFORMANCE_RATIO = 0.15;        // 15% 性能测试
+    private static final double Test_DB_CHECK_RATIO = 0.15;           // 15% 数据库验证
+    private static final double Test_BUG_MANAGE_RATIO = 0.10;         // 10% 缺陷管理
+    //最大追问数
     private static final int MAX_FOLLOW_UP_COUNT = 2;
-    
+
+
+
     // 中间DTO用于接收AI响应
     private record QuestionListDTO(
         List<QuestionDTO> questions
@@ -55,20 +84,28 @@ public class InterviewQuestionService {
     private record QuestionDTO(
         String question,
         String type,
-        String category,
-        List<String> followUps
+        String category
+//        List<String> followUps
     ) {}
     
     public InterviewQuestionService(
             ChatClient.Builder chatClientBuilder,
             StructuredOutputInvoker structuredOutputInvoker,
             @Value("classpath:prompts/interview-question-system.st") Resource systemPromptResource,
+            @Value("classpath:prompts/interview-add-question-system.st") Resource systemPromptResourceAdd,
             @Value("classpath:prompts/interview-question-user.st") Resource userPromptResource,
+            @Value("classpath:prompts/interview-add-question-user.st") Resource userPromptResourceAdd,
+
             @Value("${app.interview.follow-up-count:1}") int followUpCount) throws IOException {
         this.chatClient = chatClientBuilder.build();
         this.structuredOutputInvoker = structuredOutputInvoker;
         this.systemPromptTemplate = new PromptTemplate(systemPromptResource.getContentAsString(StandardCharsets.UTF_8));
+        this.systemPromptTemplateAdd = new PromptTemplate(systemPromptResourceAdd.getContentAsString(StandardCharsets.UTF_8));
+
         this.userPromptTemplate = new PromptTemplate(userPromptResource.getContentAsString(StandardCharsets.UTF_8));
+        this.userPromptTemplateAdd = new PromptTemplate(userPromptResourceAdd.getContentAsString(StandardCharsets.UTF_8));
+
+        this.outputConverterAdd = new BeanOutputConverter<>(AddQuestionDTO.class);
         this.outputConverter = new BeanOutputConverter<>(QuestionListDTO.class);
         this.followUpCount = Math.max(0, Math.min(followUpCount, MAX_FOLLOW_UP_COUNT));
     }
@@ -81,27 +118,92 @@ public class InterviewQuestionService {
      * @param historicalQuestions 历史问题列表（可选）
      * @return 面试问题列表
      */
-    public List<InterviewQuestionDTO> generateQuestions(String resumeText, int questionCount, List<String> historicalQuestions) {
-        log.info("开始生成面试问题，简历长度: {}, 问题数量: {}, 历史问题数: {}", 
-            resumeText.length(), questionCount, historicalQuestions != null ? historicalQuestions.size() : 0);
+    public List<InterviewQuestionDTO> generateQuestions(int jobId,String resumeText, int questionCount, List<String> historicalQuestions) {
+        log.info("开始生成面试问题，面试岗位：{},简历长度: {},问题数量: {}, 历史问题数: {}",
+            jobId, resumeText.length(), questionCount, historicalQuestions != null ? historicalQuestions.size() : 0);
         
         // 计算各类型问题数量
-        QuestionDistribution distribution = calculateDistribution(questionCount);
+        QuestionDistribution distribution = calculateDistribution(questionCount,jobId);
         
         try {
-            // 加载系统提示词
-            String systemPrompt = systemPromptTemplate.render();
-            
+            Map<String, Object> variables1 = new HashMap<>();
             // 加载用户提示词并填充变量
             Map<String, Object> variables = new HashMap<>();
             variables.put("questionCount", questionCount);
-            variables.put("projectCount", distribution.project);
-            variables.put("mysqlCount", distribution.mysql);
-            variables.put("redisCount", distribution.redis);
-            variables.put("javaBasicCount", distribution.javaBasic);
-            variables.put("javaCollectionCount", distribution.javaCollection);
-            variables.put("javaConcurrentCount", distribution.javaConcurrent);
-            variables.put("springCount", distribution.spring);
+            // 重要：interview-question-user.st 同时包含后端/前端/测试的所有 count 占位符
+            // 为避免“岗位无关变量缺失”导致模板渲染异常，这里统一设置默认值，再按岗位覆盖。
+            variables.put("projectCount", 0);
+            variables.put("mysqlCount", 0);
+            variables.put("redisCount", 0);
+            variables.put("javaBasicCount", 0);
+            variables.put("javaCollectionCount", 0);
+            variables.put("javaConcurrentCount", 0);
+            variables.put("springCount", 0);
+            variables.put("htmlCssCount", 0);
+            variables.put("jsBasicCount", 0);
+            variables.put("frameworkCount", 0);
+            variables.put("browserNetCount", 0);
+            variables.put("engineeringCount", 0);
+            variables.put("caseDesignCount", 0);
+            variables.put("automationCount", 0);
+            variables.put("performanceCount", 0);
+            variables.put("dbCheckCount", 0);
+            variables.put("bugManageCount", 0);
+// 按岗位类型强转并封装变量（修正后）
+            if (jobId == JobConstants.BackJob) {
+                BackQuestionDistribution backQuestionDistribution = (BackQuestionDistribution) distribution;
+                variables1.put("jobType","后端");
+                variables1.put("projectQuestionExample","针对你项目中的分布式锁实现，如何处理锁续期问题？");
+                variables1.put("techChainExample","HashMap 使用 → 红黑树转换机制 → 并发安全问题");
+                variables1.put("questions",QuestionUtil.BACKEND_TYPE_TABLE);
+                variables1.put("counts","8");
+                variables1.put("categoryExample",QuestionUtil.BACKEND_Category);
+
+                variables.put("projectCount", backQuestionDistribution.getProject());
+                variables.put("mysqlCount", backQuestionDistribution.getMysql());
+                variables.put("redisCount", backQuestionDistribution.getRedis());
+                variables.put("javaBasicCount", backQuestionDistribution.getJavaBasic());
+                variables.put("javaCollectionCount", backQuestionDistribution.getJavaCollection());
+                variables.put("javaConcurrentCount", backQuestionDistribution.getJavaConcurrent());
+                variables.put("springCount", backQuestionDistribution.getSpring());
+            } else if (jobId == JobConstants.FrontJob) {
+                // 1. 强转为前端专属子类（替换错误的backQuestionDistribution）
+                FrontQuestionDistribution frontQuestionDistribution = (FrontQuestionDistribution) distribution;
+                // 2. 封装前端专属字段（对应前端的getter方法）
+                variables1.put("jobType","前端");
+                variables1.put("projectQuestionExample","针对你项目中 Vue 项目的性能优化，具体做了哪些落地措施？");
+                variables1.put("techChainExample","Vue 组件通信使用 → 响应式原理 → 大数据渲染性能优化");
+                variables1.put("questions", QuestionUtil.FRONTEND_TYPE_TABLE);
+                variables1.put("counts","7");
+                variables1.put("categoryExample",QuestionUtil.FRONTEND_Category);
+
+                variables.put("projectCount", frontQuestionDistribution.getProject()); // 公共字段
+                variables.put("htmlCssCount", frontQuestionDistribution.getHtmlCss());
+                variables.put("jsBasicCount", frontQuestionDistribution.getJsBasic()); // 修正笔误：jaBasic → jsBasic
+                variables.put("frameworkCount", frontQuestionDistribution.getFramework());
+                variables.put("browserNetCount", frontQuestionDistribution.getBrowserNet());
+                variables.put("engineeringCount", frontQuestionDistribution.getEngineering());
+                // 前端无java/spring相关字段，删除错误的后端字段封装
+            } else {
+                // 1. 强转为测试专属子类（修正错误的FrontQuestionDistribution强转）
+                TestQuestionDistribution testQuestionDistribution = (TestQuestionDistribution) distribution;
+                // 2. 封装测试专属字段（对应测试的getter方法）
+                variables1.put("jobType","测试");
+                variables1.put("projectQuestionExample","针对你项目中的接口自动化测试框架，如何保证用例的稳定性和可维护性？");
+                variables1.put("techChainExample","接口自动化用例编写 → 测试数据管理 → 失败用例自动重试机制");
+                variables1.put("questions",QuestionUtil.TEST_TYPE_TABLE);
+                variables1.put("counts","7");
+                variables1.put("categoryExample",QuestionUtil.TEST_Category);
+
+                variables.put("projectCount", testQuestionDistribution.getProject()); // 公共字段
+                variables.put("caseDesignCount", testQuestionDistribution.getCaseDesign());
+                variables.put("automationCount", testQuestionDistribution.getAutomation());
+                variables.put("performanceCount", testQuestionDistribution.getPerformance());
+                variables.put("dbCheckCount", testQuestionDistribution.getDbCheck());
+                variables.put("bugManageCount", testQuestionDistribution.getBugManage());
+                // 测试无java/spring相关字段，删除错误的后端字段封装
+            }
+
             variables.put("followUpCount", followUpCount);
             variables.put("resumeText", resumeText);
             
@@ -112,9 +214,22 @@ public class InterviewQuestionService {
             } else {
                 variables.put("historicalQuestions", "暂无历史提问");
             }
-            
+            //加载系统提示词
+            String systemPrompt = systemPromptTemplate.render(variables1);
+
+            // #region agent log
+            try {
+                Files.writeString(
+                        Path.of("debug-bfb5dd.log"),
+                        ("{\"sessionId\":\"bfb5dd\",\"runId\":\"pre-fix\",\"hypothesisId\":\"E_template_missing_vars\",\"location\":\"app/src/main/java/interview/guide/modules/interview/service/InterviewQuestionService.java:generateQuestions\",\"message\":\"prompt variables prepared\",\"data\":{\"jobId\":" + jobId + ",\"questionCount\":" + questionCount + ",\"resumeTextLen\":" + (resumeText == null ? 0 : resumeText.length()) + ",\"counts\":{\"projectCount\":" + variables.get("projectCount") + ",\"mysqlCount\":" + variables.get("mysqlCount") + ",\"redisCount\":" + variables.get("redisCount") + ",\"javaBasicCount\":" + variables.get("javaBasicCount") + ",\"javaCollectionCount\":" + variables.get("javaCollectionCount") + ",\"javaConcurrentCount\":" + variables.get("javaConcurrentCount") + ",\"springCount\":" + variables.get("springCount") + ",\"htmlCssCount\":" + variables.get("htmlCssCount") + ",\"jsBasicCount\":" + variables.get("jsBasicCount") + ",\"frameworkCount\":" + variables.get("frameworkCount") + ",\"browserNetCount\":" + variables.get("browserNetCount") + ",\"engineeringCount\":" + variables.get("engineeringCount") + ",\"caseDesignCount\":" + variables.get("caseDesignCount") + ",\"automationCount\":" + variables.get("automationCount") + ",\"performanceCount\":" + variables.get("performanceCount") + ",\"dbCheckCount\":" + variables.get("dbCheckCount") + ",\"bugManageCount\":" + variables.get("bugManageCount") + "}},\"timestamp\":" + System.currentTimeMillis() + "}\n"),
+                        StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND
+                );
+            } catch (Exception ignored) {
+            }
+            // #endregion
             String userPrompt = userPromptTemplate.render(variables);
-            
+
+
             // 添加格式指令到系统提示词
             String systemPromptWithFormat = systemPrompt + "\n\n" + outputConverter.getFormat();
             
@@ -154,32 +269,42 @@ public class InterviewQuestionService {
     /**
      * 生成面试问题（不带历史问题）
      */
-    public List<InterviewQuestionDTO> generateQuestions(String resumeText, int questionCount) {
-        return generateQuestions(resumeText, questionCount, null);
+    public List<InterviewQuestionDTO> generateQuestions( int jobId,String resumeText, int questionCount) {
+        return generateQuestions(jobId,resumeText, questionCount, null);
     }
     
     /**
      * 计算各类型问题分布
      */
-    private QuestionDistribution calculateDistribution(int total) {
+    public QuestionDistribution calculateDistribution(int total,int jobId) {
         int project = Math.max(1, (int) Math.round(total * PROJECT_RATIO));
-        int mysql = Math.max(1, (int) Math.round(total * MYSQL_RATIO));
-        int redis = Math.max(1, (int) Math.round(total * REDIS_RATIO));
-        int javaBasic = Math.max(1, (int) Math.round(total * JAVA_BASIC_RATIO));
-        int javaCollection = (int) Math.round(total * JAVA_COLLECTION_RATIO);
-        int javaConcurrent = (int) Math.round(total * JAVA_CONCURRENT_RATIO);
-        int spring = total - project - mysql - redis - javaBasic - javaCollection - javaConcurrent;
-        
-        // 确保至少有1个
-        spring = Math.max(0, spring);
-        
-        return new QuestionDistribution(project, mysql, redis, javaBasic, javaCollection, javaConcurrent, spring);
+        if(jobId== JobConstants.BackJob){
+            int mysql = Math.max(1, (int) Math.round(total * Back_MYSQL_RATIO));
+            int redis = Math.max(1, (int) Math.round(total * Back_REDIS_RATIO));
+            int javaBasic = Math.max(1, (int) Math.round(total * Back_JAVA_BASIC_RATIO));
+            int javaCollection = (int) Math.round(total * Back_JAVA_COLLECTION_RATIO);
+            int javaConcurrent = (int) Math.round(total * Back_JAVA_CONCURRENT_RATIO);
+            int spring = total - project - mysql - redis - javaBasic - javaCollection - javaConcurrent;
+            // 确保至少有1个
+            spring = Math.max(0, spring);
+            return new BackQuestionDistribution(project, mysql, redis, javaBasic, javaCollection, javaConcurrent, spring);
+        } else if (jobId==JobConstants.FrontJob) {
+            int htmlCss = Math.max(1, (int) Math.round(total * Front_HTML_CSS_RATIO));
+            int jsBasic = Math.max(1, (int) Math.round(total * Front_JS_BASIC_RATIO));
+            int framework = Math.max(1, (int) Math.round(total * Front_FRAMEWORK_RATIO));
+            int browserNet = (int) Math.round(total * Front_BROWSER_NET_RATIO);
+            int engineering = (int) Math.round(total * Front_ENGINEERING_RATIO);
+            return new FrontQuestionDistribution(project,htmlCss,jsBasic,framework,browserNet,engineering);
+        }else {
+            int caseDesign = Math.max(1, (int) Math.round(total * Test_CASE_DESIGN_RATIO));
+            int automation = Math.max(1, (int) Math.round(total * Test_AUTOMATION_RATIO));
+            int performance = Math.max(1, (int) Math.round(total * Test_PERFORMANCE_RATIO));
+            int dbCheck = (int) Math.round(total * Test_DB_CHECK_RATIO);
+            int bugManage = (int) Math.round(total * Test_BUG_MANAGE_RATIO);
+            return new TestQuestionDistribution(project,caseDesign,automation,performance,dbCheck,bugManage);
+        }
     }
-    
-    private record QuestionDistribution(
-        int project, int mysql, int redis, 
-        int javaBasic, int javaCollection, int javaConcurrent, int spring
-    ) {}
+
     
     /**
      * 转换DTO为业务对象
@@ -200,17 +325,17 @@ public class InterviewQuestionService {
             int mainQuestionIndex = index;
             questions.add(InterviewQuestionDTO.create(index++, q.question(), type, q.category(), false, null));
 
-            List<String> followUps = sanitizeFollowUps(q.followUps());
-            for (int i = 0; i < followUps.size(); i++) {
-                questions.add(InterviewQuestionDTO.create(
-                    index++,
-                    followUps.get(i),
-                    type,
-                    buildFollowUpCategory(q.category(), i + 1),
-                    true,
-                    mainQuestionIndex
-                ));
-            }
+//            List<String> followUps = sanitizeFollowUps(q.followUps());
+//            for (int i = 0; i < followUps.size(); i++) {
+//                questions.add(InterviewQuestionDTO.create(
+//                    index++,
+//                    followUps.get(i),
+//                    type,
+//                    buildFollowUpCategory(q.category(), i + 1),
+//                    true,
+//                    mainQuestionIndex
+//                ));
+//            }
         }
         
         return questions;
@@ -294,5 +419,54 @@ public class InterviewQuestionService {
             return "基于“" + mainQuestion + "”，请结合你亲自做过的一个真实场景展开说明。";
         }
         return "基于“" + mainQuestion + "”，如果线上出现异常，你会如何定位并给出修复方案？";
+    }
+
+    /**
+    * 生成追问问题
+     */
+    public AddQuestionDTO generateAddQuestion(AddQuestionEntity addQuestion){
+        Map<String,Object>variables=new HashMap<>();
+        // 注意：interview-add-question-user.st 里使用的占位符是
+        // {question} {questionAnswer} 以及 {addQuestion} {addQuestionAnswer}
+        // 这里为缺省值兜底，避免模板渲染时报 “Missing variable names”
+        String question = addQuestion == null ? "" : (addQuestion.getAddQuestion() == null ? "" : addQuestion.getAddQuestion());
+        String questionAnswer = addQuestion == null ? "" : (addQuestion.getAddQuestionAnswer() == null ? "" : addQuestion.getAddQuestionAnswer());
+        variables.put("question", question);
+        variables.put("questionAnswer", questionAnswer);
+        variables.put("addQuestion", "");
+        variables.put("addQuestionAnswer", "");
+        // #region agent log
+        try {
+            Files.writeString(
+                    Path.of("debug-bfb5dd.log"),
+                    ("{\"sessionId\":\"bfb5dd\",\"runId\":\"pre-fix\",\"hypothesisId\":\"F_add_question_template_vars\",\"location\":\"app/src/main/java/interview/guide/modules/interview/service/InterviewQuestionService.java:generateAddQuestion\",\"message\":\"add-question prompt variables prepared\",\"data\":{\"questionLen\":" + question.length() + ",\"answerLen\":" + questionAnswer.length() + ",\"hasAddQuestionVars\":true},\"timestamp\":" + System.currentTimeMillis() + "}\n"),
+                    StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND
+            );
+        } catch (Exception ignored) {
+        }
+        // #endregion
+        String userPrompt= userPromptTemplateAdd.render(variables);
+        String systemPrompt = systemPromptTemplateAdd.render();
+        String systemPromptWithFormat = systemPrompt + "\n\n" + outputConverterAdd.getFormat();
+        AddQuestionDTO addQuestionDTO;
+        try {
+            addQuestionDTO=structuredOutputInvoker.invoke(
+                    chatClient,
+                    systemPromptWithFormat,
+                    userPrompt,
+                    outputConverterAdd,
+                    ErrorCode.INTERVIEW_QUESTION_GENERATION_FAILED,
+                    "追问问题生成失败：",
+                    "结构化问题生成",
+                    log
+            );
+            log.info("Ai响应解析成功");
+        }catch (Exception e){
+            log.error("面试追问生成AI调用失败：{}",e.getMessage(),e);
+            throw  new BusinessException(ErrorCode.INTERVIEW_QUESTION_GENERATION_FAILED,
+                    "面试追问生成失败"+e.getMessage());
+        }
+        return addQuestionDTO;
+
     }
 }

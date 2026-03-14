@@ -2,6 +2,7 @@ package interview.guide.modules.interview.repository;
 
 import interview.guide.modules.interview.model.InterviewAnswerEntity;
 import interview.guide.modules.interview.model.InterviewSessionEntity;
+import interview.guide.modules.interview.pojo.AddQuestionEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -33,4 +34,7 @@ public interface InterviewAnswerRepository extends JpaRepository<InterviewAnswer
      * 根据会话 sessionId 和问题索引查找单条答案（用于 upsert）
      */
     Optional<InterviewAnswerEntity> findBySession_SessionIdAndQuestionIndex(String sessionId, Integer questionIndex);
+
+
+
 }

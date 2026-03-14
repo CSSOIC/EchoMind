@@ -30,7 +30,11 @@ public class InterviewSessionEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "resume_id", nullable = false)
     private ResumeEntity resume;
-    
+
+
+    //面试岗位
+    private int jobId;
+
     // 问题总数
     private Integer totalQuestions;
     
@@ -98,6 +102,8 @@ public class InterviewSessionEntity {
     }
     
     // Getters and Setters
+    public int getJobId(){return jobId;}
+    public void setJobId(int jobId){this.jobId=jobId;}
     public Long getId() {
         return id;
     }
